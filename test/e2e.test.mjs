@@ -238,6 +238,10 @@ if (parte(PRINCIPAL)) try {
   {
     const q = await ctx.newPage();
     await q.route('**/app.js*', () => {});
+    // (v0.289) la portada entera (la primera vez del día): después del primer arranque del día sale la corta
+    const ENTERA = { corta: false, cielo: 'noche', luna: 0.84, estacion: '', fugaz: false };
+    const elegirPortada = (pag, que) => pag.addInitScript((x) => { try { if (x) localStorage.setItem('fbe-probar-portada', JSON.stringify(x)); else localStorage.removeItem('fbe-probar-portada'); } catch { /* */ } }, que);
+    await elegirPortada(q, ENTERA);
     await q.goto('http://localhost:4174/?demo', { waitUntil: 'commit' });
     await q.waitForSelector('#portada .portada-lobo');
     // tanda 11 de diseño: la marca limpia (el lobo en vectorial, el lema y la firma con la letra de la app), sin imagen
@@ -280,6 +284,7 @@ if (parte(PRINCIPAL)) try {
     // letra y con el nombre de su app; el primer fotograma es la noche lisa y la luz de detrás del lobo llega encima
     for (const [dir, nombre, manifiesto] of [['?demo', 'FBE Equipo', 'manifest.webmanifest'], ['?demo=esencial', 'FBE Esencial', 'manifest-esencial.webmanifest']]) {
       const q3 = await ctx.newPage();
+      await elegirPortada(q3, ENTERA);
       await q3.route('**/app.js*', () => {});
       await q3.route('**/app.css*', () => {});
       await q3.goto(`http://localhost:4174/${dir}`, { waitUntil: 'commit' });
@@ -307,6 +312,7 @@ if (parte(PRINCIPAL)) try {
     // ya ha acabado de dibujarse (nunca se corta a medias)
     {
       const q4 = await ctx.newPage();
+      await elegirPortada(q4, ENTERA);
       await q4.addInitScript(() => {
         window.__tramos = [];
         new MutationObserver(() => {
@@ -326,6 +332,106 @@ if (parte(PRINCIPAL)) try {
       check(antes === 'hidden' && luego === 'visible' && t.tramos.length >= 3 && t.tramos.every((v, i) => i === 0 || v > t.tramos[i - 1]) && t.tramos.at(-1) === 1 && t.alSalir === 0,
         `la barra de la portada no se ve antes de medio segundo (${antes} → ${luego}), avanza por tramos hasta llenarse (${t.tramos.join(', ')}) y el lobo ha acabado de dibujarse al salir (${t.alSalir} trazos a medias)`);
       await q4.close();
+    }
+    // (belleza 369 a 379; v0.289) El lobo y la noche: el cielo de la hora, la luna en su fase, la constelación del Lobo, la
+    // estación, la estrella fugaz y la luz de tu acento, decididos antes de pintar (aquí, elegidos por la prueba)
+    {
+      const mirar = async (que, acento = null) => {
+        const x = await ctx.newPage();
+        await elegirPortada(x, que);
+        await x.addInitScript((a) => { try { if (a) localStorage.setItem('fbe-ajustes', JSON.stringify({ acento: a })); } catch { /* */ } }, acento);
+        await x.route('**/app.js*', () => {});
+        await x.goto('http://localhost:4174/?demo', { waitUntil: 'commit' });
+        await x.waitForSelector('#portada .portada-lobo', { state: 'attached' });
+        await x.waitForTimeout(700);
+        const d = await x.evaluate(() => {
+          const el = document.getElementById('portada'); const r = document.documentElement; const ve = (s) => { const n = el.querySelector(s); return !!n && getComputedStyle(n).display !== 'none'; };
+          const lupus = el.querySelector('.portada-lupus'); const b = el.querySelector('.portada-luna b');
+          const lobo = el.querySelector('.portada-lobo').getBoundingClientRect(); const caja = lupus.getBoundingClientRect();
+          return {
+            cielo: r.dataset.cielo, estacion: r.dataset.estacion || '', corta: r.dataset.portada === 'corta', fugaz: ve('.portada-fugaz'),
+            estrellas: getComputedStyle(lupus).display === 'none' ? 0 : (getComputedStyle(lupus).backgroundImage.match(/radial-gradient/g) || []).length,
+            cuadrada: Math.abs(caja.width - caja.height) < 1, lupusDentro: caja.right <= innerWidth && caja.top >= 0,
+            fase: /radial-gradient/.test(getComputedStyle(b).maskImage || getComputedStyle(b).webkitMaskImage || ''), halo: getComputedStyle(el.querySelector('.portada-halo')).backgroundImage,
+            hojas: [...el.querySelectorAll('.portada-e')].filter((n) => getComputedStyle(n).display !== 'none').length, ojos: el.querySelectorAll('.portada-ojo').length,
+            nombre: ve('.portada-nombre'), lema: ve('.portada-lema'), firma: ve('.portada-firma'), trazo: ve('.portada-lobo-trazo'), lobo: Math.round(lobo.width),
+            centrado: Math.abs(lobo.left + lobo.width / 2 - innerWidth / 2) < 2, desborda: document.documentElement.scrollWidth > innerWidth,
+          };
+        });
+        await x.evaluate(() => { localStorage.removeItem('fbe-ajustes'); });
+        await x.close();
+        return d;
+      };
+      const noche = await mirar({ corta: false, cielo: 'noche', luna: 0.3, estacion: 'otono', fugaz: true });
+      check(noche.cielo === 'noche' && noche.estrellas === 16 && noche.cuadrada && noche.lupusDentro && noche.fase && noche.fugaz && noche.hojas === 2 && noche.ojos === 2 && noche.nombre && noche.firma && noche.trazo && /rgba\(96, 68, 228/.test(noche.halo) && !noche.desborda,
+        `de noche, la portada lleva la constelación del Lobo (16 estrellas), la luna en su fase, la estrella fugaz si toca y, en otoño, dos hojas ${JSON.stringify({ ...noche, halo: noche.halo.slice(0, 60) })}`);
+      const dia = await mirar({ corta: false, cielo: 'dia', estacion: 'invierno' }, 'pino');
+      check(dia.cielo === 'dia' && dia.estrellas === 0 && !dia.fase && !dia.fugaz && dia.hojas === 7 && /rgba\(28, 147, 141/.test(dia.halo) && /rgba\(150, 176, 255/.test(dia.halo),
+        `de día, sin estrellas ni fase, con la luz fría desde arriba; en invierno, copos; y la luz de detrás del lobo, del color de tu acento ${JSON.stringify({ ...dia, halo: dia.halo.slice(0, 80) })}`);
+      // (belleza 380 y 388) la portada corta: solo el lobo pequeño y la noche
+      const corta = await mirar({ corta: true, cielo: 'noche', luna: 0.6, estacion: 'otono' });
+      check(corta.corta && !corta.nombre && !corta.lema && !corta.firma && !corta.trazo && !corta.fugaz && corta.hojas === 0 && corta.lobo <= 112 && corta.lobo >= 60 && corta.centrado,
+        `la portada corta: solo el lobo pequeño (${corta.lobo} px) y la noche, sin nombre, lema ni firma ${JSON.stringify({ ...corta, halo: '' })}`);
+      // y de verdad (sin elegir nada): la primera vez del día, entera; al volver el mismo día, corta
+      const x = await ctx.newPage();
+      await elegirPortada(x, null);
+      await x.route('**/app.js*', () => {});
+      await x.goto('http://localhost:4174/?demo', { waitUntil: 'commit' });
+      await x.evaluate(() => { localStorage.removeItem('fbe-portada-dia'); });
+      await x.reload({ waitUntil: 'commit' });
+      await x.waitForSelector('#portada .portada-lobo', { state: 'attached' });
+      const primera = await x.evaluate(() => ({ corta: document.documentElement.dataset.portada === 'corta', dia: localStorage.getItem('fbe-portada-dia') }));
+      await x.reload({ waitUntil: 'commit' });
+      await x.waitForSelector('#portada .portada-lobo', { state: 'attached' });
+      const segunda = await x.evaluate(() => document.documentElement.dataset.portada === 'corta');
+      check(!primera.corta && /^\d{4}-\d{2}-\d{2}$/.test(primera.dia || '') && segunda, `la primera vez del día, la portada entera (se apunta el día: ${primera.dia}); al volver el mismo día, la corta`);
+      await x.close();
+    }
+    // (belleza 382 y 383) La salida: la portada se abre desde la luna y el lobo vuela hasta el de la cabecera; al acabar no
+    // queda nada suelto. (387) Y al volver de segundo plano, nunca portada.
+    {
+      const y = await ctx.newPage();
+      await elegirPortada(y, ENTERA);
+      await y.addInitScript(() => {
+        window.__salida = null;
+        new MutationObserver(() => {
+          const el = document.getElementById('portada');
+          if (el?.hasAttribute('data-sale') && !window.__salida) requestAnimationFrame(() => {
+            const copia = [...document.body.children].find((n) => n.tagName.toLowerCase() === 'svg' && n.style.position === 'fixed');
+            window.__salida = { abre: el.classList.contains('abre'), funde: el.classList.contains('fuera'), mascara: /radial-gradient/.test(getComputedStyle(el).maskImage || getComputedStyle(el).webkitMaskImage || ''), anim: getComputedStyle(el).animationName, copia: !!copia, usa: copia ? copia.querySelectorAll('use').length : 0, destinoOculto: document.querySelector('.marca img')?.style.visibility === 'hidden' };
+          });
+        }).observe(document, { subtree: true, attributes: true, attributeFilter: ['data-sale'] });
+      });
+      await y.route('**/app.js*', async (r) => { await new Promise((ok) => setTimeout(ok, 400)); r.continue(); });
+      await y.goto('http://localhost:4174/?demo');
+      await y.getByRole('heading', { name: 'Entra en tu cuenta' }).waitFor();
+      await y.waitForFunction(() => !document.getElementById('portada') && window.__salida);
+      await y.waitForTimeout(700);
+      const fin = await y.evaluate(() => ({ ...window.__salida, sueltos: [...document.body.children].filter((n) => n.tagName.toLowerCase() === 'svg' && n.style.position === 'fixed').length, marca: getComputedStyle(document.querySelector('.marca img')).visibility, raiz: document.documentElement.classList.contains('hay-portada') }));
+      check(fin.abre && !fin.funde && fin.mascara && fin.anim === 'portada-abre' && fin.copia && fin.usa === 1 && fin.destinoOculto && fin.sueltos === 0 && fin.marca === 'visible' && !fin.raiz,
+        `al entrar, la portada se abre desde la luna y el lobo vuela hasta el de la cabecera; al acabar no queda nada suelto ${JSON.stringify(fin)}`);
+      await y.evaluate(() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' }); document.dispatchEvent(new Event('visibilitychange')); });
+      await y.waitForTimeout(150);
+      await y.evaluate(() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' }); document.dispatchEvent(new Event('visibilitychange')); window.dispatchEvent(new Event('focus')); window.dispatchEvent(new Event('pageshow')); });
+      await y.waitForTimeout(400);
+      check(await y.evaluate(() => !document.getElementById('portada') && !document.documentElement.classList.contains('hay-portada')), 'al volver de segundo plano, nunca portada');
+      await y.close();
+      // con «reducir movimiento»: el lobo entero y quieto, y la salida, un corte (sin abrirse ni volar)
+      const quieto = await navegador.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', locale: 'es-ES', timezoneId: 'Europe/Madrid' });
+      const z = await quieto.newPage();
+      await elegirPortada(z, ENTERA);
+      await z.addInitScript(() => {
+        window.__salida = null;
+        new MutationObserver(() => { const el = document.getElementById('portada'); if (el?.hasAttribute('data-sale') && !window.__salida) window.__salida = { abre: el.classList.contains('abre'), funde: el.classList.contains('fuera') }; }).observe(document, { subtree: true, attributes: true, attributeFilter: ['data-sale', 'class'] });
+        document.addEventListener('DOMContentLoaded', () => { const el = document.getElementById('portada'); window.__quieta = el ? { trazo: getComputedStyle(el.querySelector('.portada-lobo-trazo')).display, relleno: getComputedStyle(el.querySelector('.portada-lobo-relleno')).animationName, lupus: getComputedStyle(el.querySelector('.portada-lupus')).animationName, nombre: getComputedStyle(el.querySelector('.portada-nombre')).animationName } : null; });
+      });
+      await z.goto('http://localhost:4174/?demo');
+      await z.getByRole('heading', { name: 'Entra en tu cuenta' }).waitFor();
+      await z.waitForFunction(() => !document.getElementById('portada'));
+      const qz = await z.evaluate(() => ({ quieta: window.__quieta, salida: window.__salida, sueltos: [...document.body.children].filter((n) => n.tagName.toLowerCase() === 'svg' && n.style.position === 'fixed').length }));
+      check(qz.quieta?.trazo === 'none' && qz.quieta?.relleno === 'none' && qz.quieta?.lupus === 'none' && qz.quieta?.nombre === 'none' && !qz.salida?.abre && !qz.salida?.funde && qz.sueltos === 0,
+        `con «reducir movimiento», la portada quieta y entera, y la salida, un corte ${JSON.stringify(qz)}`);
+      await quieto.close();
     }
   }
   await p.goto('http://localhost:4174/?demo');

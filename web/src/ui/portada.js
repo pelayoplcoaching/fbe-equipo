@@ -5,6 +5,7 @@
 // gesto: si la app llega a mitad del dibujo, el trazo se acelera para acabar en 300 ms como mucho en vez de cortarse; y si
 // todo estaba listo antes de 150 ms, la portada se quita sin más. La barra del sistema pasa de la noche al color de la app
 // en unos pasos, no de golpe.
+// (v0.289) La salida: la portada se abre desde la luna (no se funde) y el lobo viaja siempre al que haya debajo.
 const MINIMO_MS = 450; // (solo con «reducir movimiento», que no tiene gesto que acabar) si todo llega antes, la portada no parpadea
 const INSTANTE_MS = 150; // todo listo antes de esto: sin portada (ni salida)
 const REMATE_MS = 300; // lo que como mucho se espera a que el lobo acabe de dibujarse
@@ -78,6 +79,62 @@ function fundirBarra(ms = 300) {
   requestAnimationFrame(paso);
 }
 
+// (belleza 383, v0.289) El viaje del lobo, siempre: el de la portada vuela hasta el lobo que haya debajo (la marca de la
+// bienvenida, la de la cabecera de Hoy o la de la pantalla de entrar) y aterriza en él. Con una copia suelta que se mueve
+// con transform (sin transiciones de vista: vale en cualquier navegador y no captura la pantalla). Sin destino a la vista,
+// el lobo se va con la portada.
+const VUELO_MS = 420;
+const DESTINOS = '.bdia-marca svg, .marca img';
+function destinoDelLobo() {
+  for (const d of document.querySelectorAll(DESTINOS)) {
+    const r = d.getBoundingClientRect();
+    if (r.width > 4 && r.height > 4 && r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth && !d.closest('[inert], [aria-hidden="true"]:not(svg):not(img)')) return d;
+  }
+  return null;
+}
+export function volarLobo(lobo, destino, ms = VUELO_MS) {
+  try {
+    const a = lobo.getBoundingClientRect(), b = destino.getBoundingClientRect();
+    if (!(a.width > 0) || !(b.width > 0) || typeof lobo.animate !== 'function') return null;
+    const copia = lobo.cloneNode(true);
+    copia.removeAttribute('class');
+    copia.querySelectorAll('.portada-lobo-trazo, .portada-ojo').forEach((x) => x.remove());
+    copia.querySelectorAll('[class]').forEach((x) => x.removeAttribute('class'));
+    Object.assign(copia.style, { position: 'fixed', left: `${a.left}px`, top: `${a.top}px`, width: `${a.width}px`, height: `${a.height}px`, margin: '0', zIndex: '2147483001', fill: '#fff', pointerEvents: 'none', transformOrigin: '0 0', willChange: 'transform' });
+    copia.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(copia);
+    lobo.style.visibility = 'hidden';
+    const antes = destino.style.visibility;
+    destino.style.visibility = 'hidden';
+    // (cabe entero en su destino, centrado: la caja del lobo no es cuadrada)
+    const k = Math.min(b.width / a.width, b.height / a.height);
+    const x = b.left + (b.width - a.width * k) / 2 - a.left, y = b.top + (b.height - a.height * k) / 2 - a.top;
+    const anim = copia.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${x}px, ${y}px) scale(${k})`, opacity: 1, offset: 0.82 }, { transform: `translate(${x}px, ${y}px) scale(${k})`, opacity: 0 }], { duration: ms, easing: 'cubic-bezier(.3,0,.2,1)', fill: 'forwards' });
+    let hecho = false;
+    const fin = () => { if (hecho) return; hecho = true; destino.style.visibility = antes; copia.remove(); };
+    // (el destino vuelve cuando la copia ya está encima, para que el relevo no se note)
+    setTimeout(() => { destino.style.visibility = antes; }, ms * 0.8);
+    anim.finished.then(fin, fin);
+    setTimeout(fin, ms + 200);
+    return anim;
+  } catch { return null; }
+}
+
+// (belleza 382) La portada no se funde: se abre. Un círculo crece desde la luna hasta llenar la pantalla y deja ver la app
+// (300 ms). Hace falta poder animar una medida propia (@property); si no, o en un móvil lento, el fundido de siempre.
+const ABRE_MS = 300;
+const puedeAbrirse = () => typeof CSS !== 'undefined' && typeof CSS.registerProperty === 'function' && !document.documentElement.hasAttribute('data-ligero');
+function abrir(el) {
+  const luna = el.querySelector('.portada-luna') || el.querySelector('.portada-lobo');
+  const r = luna?.getBoundingClientRect();
+  const cx = r && r.width ? r.left + r.width / 2 : window.innerWidth / 2, cy = r && r.width ? r.top + r.height / 2 : window.innerHeight * 0.4;
+  const lejos = Math.hypot(Math.max(cx, window.innerWidth - cx), Math.max(cy, window.innerHeight - cy));
+  el.style.setProperty('--ox', `${Math.round(cx)}px`);
+  el.style.setProperty('--oy', `${Math.round(cy)}px`);
+  el.style.setProperty('--portada-rmax', `${Math.ceil(lejos) + 4}px`);
+  el.classList.add('abre');
+}
+
 function quitarYa({ sinSalida = false } = {}) {
   if (quitada) return;
   quitada = true;
@@ -86,25 +143,19 @@ function quitarYa({ sinSalida = false } = {}) {
   // (a partir de aquí la portada está saliendo: lo que la mire, que lo sepa)
   el.dataset.sale = '';
   avanzarPortada(1);
-  if (sinSalida) { document.getElementById('tc-portada')?.remove(); sinPortada(el); return; }
+  if (sinSalida || quieto() || document.visibilityState === 'hidden') { document.getElementById('tc-portada')?.remove(); sinPortada(el); return; }
   fundirBarra();
-  // (diseño, tanda 19) Si debajo hay ya una marca con el lobo (la bienvenida del día), el lobo de la portada viaja hasta
-  // ella y la noche se levanta; si no, o sin transiciones de vista, la portada se funde como siempre.
   const lobo = el.querySelector('.portada-lobo');
-  const destino = !quieto() && document.startViewTransition && lobo && document.querySelector('.bdia-marca svg, .acceso-marca svg');
-  if (destino && document.visibilityState !== 'hidden') {
-    try {
-      lobo.style.viewTransitionName = 'vt-lobo';
-      document.documentElement.dataset.vt = 'portada';
-      const t = document.startViewTransition(() => { sinPortada(el); destino.style.viewTransitionName = 'vt-lobo'; });
-      const fin = () => { destino.style.viewTransitionName = ''; if (document.documentElement.dataset.vt === 'portada') delete document.documentElement.dataset.vt; };
-      t.finished.catch(() => {}).then(fin);
-      setTimeout(() => { try { t.skipTransition(); } catch { /* */ } }, 1500);
-      return;
-    } catch { lobo.style.viewTransitionName = ''; delete document.documentElement.dataset.vt; }
+  const destino = lobo && destinoDelLobo();
+  if (destino) volarLobo(lobo, destino);
+  // (sobre la bienvenida del día no hace falta abrir nada: es la misma noche; la portada se funde y el lobo viaja a su marca)
+  if (puedeAbrirse() && !document.querySelector('.bdia')) {
+    abrir(el);
+    setTimeout(() => sinPortada(el), ABRE_MS + 20);
+    return;
   }
   el.classList.add('fuera');
-  setTimeout(() => sinPortada(el), quieto() ? 0 : 380);
+  setTimeout(() => sinPortada(el), 380);
 }
 
 // Cuándo: si todo estaba listo en un instante, sin portada; con «reducir movimiento», tras su mínimo (para que no
@@ -134,7 +185,14 @@ export function quitarPortada({ esperarDatos = false } = {}) {
     cuandoToque();
   };
   const tope = setTimeout(acabar, TOPE_MS);
-  function comprobar() { if (!document.querySelector('.siluetas')) acabar(); }
+  // (belleza 386) y a que lo de arriba ya no se mueva: el fondo de la bienvenida, si la hay, ya cargado (o fallado); se
+  // vuelve a mirar cuando llega
+  function comprobar() {
+    if (document.querySelector('.siluetas')) return;
+    const fondo = document.querySelector('img.bdia-fondo');
+    if (fondo && !fondo.complete) { if (!fondo.dataset.portada) { fondo.dataset.portada = '1'; fondo.addEventListener('load', revisar, { once: true }); fondo.addEventListener('error', revisar, { once: true }); } return; }
+    acabar();
+  }
   window.addEventListener('fbe-siluetas-fuera', revisar);
   requestAnimationFrame(() => requestAnimationFrame(comprobar));
 }

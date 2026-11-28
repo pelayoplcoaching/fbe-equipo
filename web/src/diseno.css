@@ -1218,18 +1218,11 @@ img.img-llega { opacity: 0; }
   ::view-transition-old(vt-arte-sesion) { animation: vt-funde-fuera var(--mov-medio) ease-out both; }
   ::view-transition-new(vt-arte-sesion) { animation: vt-funde-dentro var(--mov-lento) ease-out both; }
   ::view-transition-group(vt-titulo-sesion), ::view-transition-group(vt-avatar) { animation-timing-function: var(--curva-llega); }
-  /* De la portada a la app (ui/portada.js): el lobo viaja hasta la marca de la bienvenida y la noche se levanta */
-  :root[data-vt="portada"]::view-transition-old(root) { animation: vt-noche-sube .46s var(--curva-casa) both; }
-  :root[data-vt="portada"]::view-transition-new(root) { animation: vt-funde-dentro .3s ease-out .08s both; }
-  ::view-transition-group(vt-lobo) { animation-duration: .52s; animation-timing-function: var(--curva-llega); }
-  ::view-transition-old(vt-lobo) { animation: vt-funde-fuera .3s ease-out .1s both; }
-  ::view-transition-new(vt-lobo) { animation: vt-funde-dentro .3s ease-out both; }
 }
 @keyframes vt-sale-izq-casa { to { opacity: 0; transform: translateX(-28px); } }
 @keyframes vt-entra-der-casa { from { opacity: 0; transform: translateX(28px); } }
 @keyframes vt-sale-der-casa { to { opacity: 0; transform: translateX(28px); } }
 @keyframes vt-entra-izq-casa { from { opacity: 0; transform: translateX(-28px); } }
-@keyframes vt-noche-sube { to { opacity: 0; transform: translateY(-6%) scale(1.02); } }
 
 /* ── 53 · Plegar y desplegar sin saltos (tanda 19) ────────────────────────────────────────────────────────────────────
    Los <details> (las secciones de Hoy, las pastillas del equipo, las notas de las gráficas, los desgloses) abrían y

@@ -1,4 +1,4 @@
-// (v0.288) La entrada (belleza 351-500), tanda G, primera parte: el primer fotograma. Aquí, lo puro (las imágenes de
+// (v0.288 y v0.289) La entrada (belleza 351-500), tanda G: el primer fotograma; el lobo, la noche y la salida. Aquí, lo puro (las imágenes de
 // arranque de iOS, la portada tal como va escrita en la página, la barra de carga, el color de la barra del sistema, qué
 // app es) y que cada pieza está en su sitio; en el navegador, la parte principal de test/e2e.test.mjs.
 //   node test/entrada.test.mjs
@@ -139,6 +139,150 @@ console.log('367 y 368 · El trazado del lobo, una sola vez; y sin salto de letr
   const css = estiloPortada({ fuente: "@font-face{font-family:'Archivo Variable';font-display:block;src:url(x)}" });
   check(css.startsWith("<style>\n@font-face{font-family:'Archivo Variable';font-display:block") && leer('scripts/build.mjs').includes(".replace('font-display:swap', 'font-display:block')") && leer('web/index.html').includes('rel="preload" href="fonts/archivo-latin.woff2"'),
     'la portada lleva su letra y la espera (ya se precarga): el nombre no cambia de letra a media portada');
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// (v0.289) Tanda G, segunda parte: el lobo y la noche (369 a 380), la salida (382, 383 y 386) y la portada corta (388)
+// El archivo de arranque, en un navegador de mentira: qué decide con cada fecha, hora y lo que haya guardado
+function arrancar({ fecha, guardado = {}, busqueda = '', almohadilla = '', automatico = false, azar = 0.5 } = {}) {
+  const attrs = {}, estilo = {}, almacen = { ...guardado };
+  const document = { documentElement: { setAttribute: (k, v) => { attrs[k] = v; }, style: { setProperty: (k, v) => { estilo[k] = v; } } }, querySelector: () => null, createElement: () => ({ setAttribute() {} }), title: '' };
+  const window = { localStorage: { getItem: (k) => (k in almacen ? almacen[k] : null), setItem: (k, v) => { almacen[k] = String(v); } }, location: { search: busqueda, hash: almohadilla }, Promise, setTimeout: () => 0, navigator: { webdriver: automatico } };
+  const RealDate = Date;
+  const FakeDate = class extends RealDate { constructor(...a) { super(...(a.length ? a : [fecha])); } static now() { return new RealDate(fecha).getTime(); } };
+  const FakeMath = Object.create(Math); FakeMath.random = () => azar;
+  new Function('document', 'window', 'Date', 'Math', leer('web/arranque.js'))(document, window, FakeDate, FakeMath);
+  return { attrs, estilo, almacen };
+}
+const { momentoDelDia, faseLuna, temporadaDe, SOL_MADRID } = await import('../web/src/logica/cielo.js');
+const { ESTACIONES } = await import('../web/src/logica/imagenes.js');
+const { ACENTOS } = await import('../web/src/logica/acentos.js');
+const { LUPUS, estrellasLupus, OJOS_LOBO } = await import('../scripts/portada.mjs');
+const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+console.log('372 · El cielo de tu hora, decidido antes de pintar');
+{
+  let mal = [];
+  for (let mes = 0; mes < 12; mes++) for (let h = 0; h < 24; h += 0.5) {
+    const d = new Date(2026, mes, 15, Math.floor(h), (h % 1) * 60);
+    const a = arrancar({ fecha: d }).attrs['data-cielo'];
+    if (a !== momentoDelDia(h, iso(d))) mal.push(`${mes + 1}/${h}: ${a}`);
+  }
+  check(mal.length === 0 && SOL_MADRID.length === 12, `el mismo momento que el cielo de Hoy, a cualquier hora de cualquier mes ${mal.slice(0, 3).join(' ')}`);
+  const css = estiloPortada();
+  check(['amanecer', 'dia', 'atardecer'].every((m) => css.includes(`html[data-cielo=${m}] #portada .portada-halo{background:radial-gradient(`)) && css.includes('html[data-cielo=dia] #portada .portada-lupus,html[data-cielo=dia] #portada::after{display:none}'),
+    'amanecer (rosado desde abajo), día (luz fría desde arriba, sin estrellas) y atardecer (naranja a la derecha), como una luz encima de la noche');
+  check(new RegExp(`#portada\\{[^}]*background:${FONDO_PORTADA};`).test(css), 'la noche de base no cambia: del icono a la portada sigue sin salto');
+}
+
+console.log('371 · La luna, con su fase de verdad');
+{
+  let mal = 0;
+  for (let i = 0; i < 60; i++) {
+    const d = new Date(2026, 10, 1 + i, 23, 0);
+    const a = arrancar({ fecha: d }); const f = faseLuna(d.getTime());
+    if (Number(a.estilo['--luna-ilum']) !== Math.round(f.ilum * 100) / 100 || a.estilo['--luna-lado'] !== (f.creciente ? '-1' : '1') || (a.attrs['data-luna'] === 'llena') !== (f.ilum > 0.96)) mal++;
+  }
+  check(mal === 0, 'la misma luna que el cielo de Hoy, sesenta noches seguidas');
+  const css = estiloPortada();
+  check(css.includes('html[data-cielo=noche] #portada .portada-luna b{-webkit-mask-image:radial-gradient(ellipse 51% 51% at calc(50% + var(--luna-ilum,1)*var(--luna-lado,1)*104%) 50%') && css.includes('html[data-luna=llena] #portada .portada-luna b{-webkit-mask-image:none;mask-image:none}'),
+    'la fase recorta el disco (solo de noche); llena, entera y con más resplandor');
+}
+
+console.log('373 a 375 · La constelación del Lobo, la estrella fugaz y la estación');
+{
+  const e = estrellasLupus();
+  const de = (n) => e.find((x) => x.n === n);
+  check(LUPUS.length === 16 && e.length === 16 && e.every((x) => x.x >= 6 && x.x <= 94 && x.y >= 6 && x.y <= 94) && new Set(e.map((x) => `${x.x},${x.y}`)).size === 16, 'dieciséis estrellas, cada una en su sitio y dentro de su caja');
+  check(de('alfa').r === 2.6 && de('mu').r === 1.5 && de('eta').x < de('alfa').x && de('iota').x > de('alfa').x && de('ji').y < de('zeta').y && de('zeta').y === Math.max(...e.map((x) => x.y)),
+    'como se ve en el cielo: el norte arriba, el este a la izquierda y las más brillantes, más grandes');
+  const css = estiloPortada();
+  check(veces(css.slice(css.indexOf('#portada .portada-lupus{'), css.indexOf('#portada::after{')), 'radial-gradient(') === 16 && marcadoPortada.includes('<i class="portada-lupus"></i>'), 'van dibujadas en la portada (sin imágenes)');
+  const noche = new Date(2026, 5, 10, 2, 0);
+  check('data-fugaz' in arrancar({ fecha: noche, azar: 0.05 }).attrs && !('data-fugaz' in arrancar({ fecha: noche, azar: 0.5 }).attrs) && !('data-fugaz' in arrancar({ fecha: new Date(2026, 5, 10, 12, 0), azar: 0.05 }).attrs),
+    'una estrella fugaz, una de cada diez veces y solo de noche');
+  let malE = [];
+  for (let mes = 0; mes < 12; mes++) for (const dia of [1, 6, 7, 19, 20, 28]) {
+    const d = new Date(2026, mes, dia, 12, 0);
+    const a = arrancar({ fecha: d }).attrs['data-estacion'] || '';
+    const esperada = temporadaDe(iso(d)) || (ESTACIONES[mes] === 'otono' ? 'otono' : '');
+    if (a !== esperada) malE.push(`${dia}/${mes + 1}: ${a}`);
+  }
+  check(malE.length === 0, `la estación de la app: Navidad e invierno (copos) y otoño (dos hojas); en primavera y verano, nada ${malE.slice(0, 3).join(' ')}`);
+  check(veces(marcadoPortada, 'class="portada-e') === 7 && veces(marcadoPortada, 'class="portada-e hoja"') === 2 && /@keyframes portada-cae\{from\{transform:translateY\(-12vh\)\}\}/.test(css) && !/portada-(cae|hoja|fugaz) [^;}]*infinite/.test(css),
+    'caen una vez y se quedan quietos');
+}
+
+console.log('369, 370 y 376 a 379 · El lobo despierta, la luz de tu acento y las letras');
+{
+  const css = estiloPortada();
+  check(OJOS_LOBO.length === 2 && veces(marcadoPortada, 'class="portada-ojo"') === 2 && /#portada \.portada-ojo\{[^}]*animation:portada-ojo \.7s ease-out 1s both\}/.test(css) && css.includes('@keyframes portada-ojo{0%{opacity:0}35%{opacity:.95}100%{opacity:0}}'),
+    'los ojos se encienden un instante al acabar de dibujarse (y se apagan solos)');
+  check(!/portada-(traza|rellena|lobo)\$/.test('portada-ojo') && leer('web/src/ui/portada.js').includes('/^portada-(traza|rellena|lobo)$/'), 'sin alargar la entrada: lo que se espera es el dibujo, no los ojos');
+  check(css.includes('@keyframes portada-rellena{from{opacity:0;clip-path:inset(0 0 100% 0)}'), 'el relleno baja como una luz, de arriba abajo');
+  const luz = (a) => { const h = (x) => [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16)); const c = h(a.claro.morado), o = h(a.oscuro.morado); return c.map((v, i) => Math.round((v + o[i]) / 2)).join(','); };
+  const fallan = ACENTOS.filter((a) => a.id !== 'morado').filter((a) => arrancar({ fecha: new Date(2026, 5, 10, 12, 0), guardado: { 'fbe-ajustes': JSON.stringify({ acento: a.id }) } }).estilo['--portada-luz'] !== luz(a)).map((a) => a.id);
+  check(fallan.length === 0 && ACENTOS.length === 11 && !('--portada-luz' in arrancar({ fecha: new Date(2026, 5, 10, 12, 0), guardado: { 'fbe-ajustes': '{"acento":"morado"}' } }).estilo)
+    && !('--portada-luz' in arrancar({ fecha: new Date(2026, 5, 10, 12, 0), guardado: { 'fbe-ajustes': '{"acento":"constructor"}' } }).estilo) && 'data-cielo' in arrancar({ fecha: new Date(2026, 5, 10, 12, 0), guardado: { 'fbe-ajustes': '{roto' } }).attrs,
+    `la luz de detrás del lobo, del color de tu acento (los once; con ajustes rotos, la de siempre) ${fallan.join(' ')}`);
+  check(css.includes('rgba(var(--portada-luz,96,68,228),.5)') && css.includes('#portada .portada-grano{') && marcadoPortada.includes('class="portada-grano"'), 'y con el grano de la casa encima');
+  const entradas = ['portada-nombre', 'portada-filo', 'portada-palabra'].map((k) => css.slice(css.indexOf(`@keyframes ${k}{`), css.indexOf('}}', css.indexOf(`@keyframes ${k}{`))));
+  check(entradas.every((k) => k.length > 20 && !k.includes('opacity')) && css.includes('@keyframes portada-nombre{from{font-stretch:62%;') && css.includes('@keyframes portada-filo{from{transform:scaleX(0)}}') && veces(marcadoPortada.slice(marcadoPortada.indexOf('class="portada-lema"'), marcadoPortada.indexOf('class="portada-pie"')), '<span>') === 3,
+    'el nombre se abre de la letra estrecha a la ancha, el filo se dibuja del centro a los lados y el lema entra palabra a palabra (ninguno cambiando la opacidad)');
+  const quieto = css.slice(css.indexOf('@media (prefers-reduced-motion:reduce)'));
+  check(['.portada-lupus', '.portada-luna', '.portada-halo', '.portada-e', '.portada-lobo-relleno', '.portada-nombre', '.portada-filo', '.portada-lema span', '.portada-firma'].every((k) => quieto.includes(k)) && quieto.includes('#portada .portada-lobo-trazo,#portada .portada-ojo,#portada .portada-fugaz{display:none!important}'),
+    'con «reducir movimiento», todo quieto y entero desde el principio');
+  check(veces(css, 'infinite') === 2, 'lo único que no para mientras carga son las estrellas (como antes)');
+}
+
+console.log('380 y 388 · La firma, solo la primera vez del día; después, la portada corta');
+{
+  const d = new Date(2026, 10, 28, 9, 0);
+  const primera = arrancar({ fecha: d });
+  check(!('data-portada' in primera.attrs) && primera.almacen['fbe-portada-dia'] === '2026-11-28', 'la primera vez del día, la portada entera (y se apunta el día, solo eso)');
+  check(arrancar({ fecha: d, guardado: primera.almacen }).attrs['data-portada'] === 'corta' && !('data-portada' in arrancar({ fecha: new Date(2026, 10, 29, 9, 0), guardado: primera.almacen }).attrs), 'si vuelves el mismo día, corta; al día siguiente, entera otra vez');
+  check(arrancar({ fecha: d, almohadilla: '#mensajes/0a1b' }).attrs['data-portada'] === 'corta' && arrancar({ fecha: d, busqueda: '?accion=sesion', almohadilla: '#hoy' }).attrs['data-portada'] === 'corta' && !('data-portada' in arrancar({ fecha: d, almohadilla: '#hoy' }).attrs) && !('data-portada' in arrancar({ fecha: d, busqueda: '?demo' }).attrs),
+    'y también si vienes de un aviso o de un atajo');
+  check(!('data-fugaz' in arrancar({ fecha: new Date(2026, 5, 10, 2, 0), guardado: { 'fbe-portada-dia': '2026-06-10' }, azar: 0.01 }).attrs), 'en la corta, sin estrella fugaz');
+  const css = estiloPortada();
+  check(/html\[data-portada=corta\] #portada \.portada-nombre,[^{]*\.portada-firma-2,[^{]*\{display:none!important\}/.test(css) && css.includes('html[data-portada=corta] #portada .portada-lobo{width:min(112px,34vw,20vh);animation-duration:.26s}') && css.includes('html[data-portada=corta] #portada .portada-lobo-relleno{animation:none}'),
+    'solo el lobo pequeño y la noche: sin nombre, lema ni firma, y sin dibujo que esperar');
+  check(arrancar({ fecha: d, guardado: { 'fbe-probar-portada': '{"corta":true}' } }).attrs['data-portada'] !== 'corta' && arrancar({ fecha: d, guardado: { 'fbe-probar-portada': '{"corta":true,"cielo":"dia"}' }, automatico: true }).attrs['data-cielo'] === 'dia',
+    'lo de las pruebas solo vale en un navegador automático');
+}
+
+console.log('382, 383 y 386 · La salida: la portada se abre y el lobo viaja siempre');
+{
+  const css = estiloPortada(); const p = leer('web/src/ui/portada.js');
+  check(css.includes('@property --portada-r{syntax:"<length>";inherits:false;initial-value:0px}') && /#portada\.abre\{[^}]*mask-image:radial-gradient\(circle at var\(--ox,50%\) var\(--oy,40%\),transparent var\(--portada-r\)[^}]*animation:portada-abre \.3s/.test(css) && css.includes('@keyframes portada-abre{to{--portada-r:var(--portada-rmax,150vmax)}}'),
+    'un círculo crece desde la luna y deja ver la app, en 300 ms');
+  check(p.includes("if (puedeAbrirse() && !document.querySelector('.bdia')) {") && estiloPortada().includes('#portada.abre .portada-lupus,#portada.abre::after,#portada.fuera .portada-lupus,#portada.fuera::after{animation:none}'),
+    'sobre la bienvenida del d\u00eda, que es la misma noche, la portada se funde (no hay nada que abrir); y al salir, sus estrellas se paran');
+  check(p.includes("typeof CSS.registerProperty === 'function' && !document.documentElement.hasAttribute('data-ligero')") && p.includes("el.classList.add('fuera')") && /if \(sinSalida \|\| quieto\(\) \|\| document\.visibilityState === 'hidden'\)/.test(p),
+    'donde no se puede (o en un móvil lento), el fundido de siempre; con «reducir movimiento», un corte');
+  check(p.includes("const DESTINOS = '.bdia-marca svg, .marca img';") && !p.includes('startViewTransition') && !leer('web/src/diseno.css').includes('vt-lobo') && p.includes("copia.animate(["),
+    'el lobo vuela al que haya debajo (la bienvenida, la cabecera de Hoy o la de entrar), sin transiciones de vista');
+  check(p.includes("const fondo = document.querySelector('img.bdia-fondo');") && p.includes('if (fondo && !fondo.complete)') && /const tope = setTimeout\(acabar, TOPE_MS\);/.test(p), 'y la portada espera al fondo de la bienvenida (con su tope de siempre)');
+}
+// el vuelo, con elementos de mentira
+{
+  const { volarLobo } = await import('../web/src/ui/portada.js');
+  const quitados = []; let animado = null;
+  const copia = { style: {}, removeAttribute() {}, setAttribute() {}, querySelectorAll: () => [], remove() { quitados.push('copia'); }, animate(k, o) { animado = { k, o }; return { finished: new Promise(() => {}) }; } };
+  const lobo = { style: {}, getBoundingClientRect: () => ({ left: 67, top: 190, width: 256, height: 293 }), animate() {}, cloneNode: () => copia };
+  const destino = { style: { visibility: '' }, getBoundingClientRect: () => ({ left: 16, top: 12, width: 28, height: 28 }) };
+  const cuerpo = []; globalThis.document = { body: { appendChild: (x) => cuerpo.push(x) } };
+  const a = volarLobo(lobo, destino, 40);
+  const fin = animado?.k?.[2]?.transform || '';
+  const m = /translate\(([-\d.]+)px, ([-\d.]+)px\) scale\(([\d.]+)\)/.exec(fin);
+  const k = Number(m?.[3]), x = Number(m?.[1]), y = Number(m?.[2]);
+  check(!!a && cuerpo.length === 1 && lobo.style.visibility === 'hidden' && destino.style.visibility === 'hidden' && copia.style.position === 'fixed' && Math.abs(k - 28 / 293) < 0.001
+    && Math.abs((67 + x) + (256 * k) / 2 - 30) < 0.5 && Math.abs((190 + y) + (293 * k) / 2 - 26) < 0.5,
+    'la copia sale de donde está el lobo y aterriza centrada y entera en su destino');
+  await new Promise((r) => setTimeout(r, 300));
+  check(destino.style.visibility === '' && quitados.length === 1, 'al llegar, el lobo de destino vuelve a verse y la copia se quita (aunque la animación no avise)');
+  check(volarLobo({ getBoundingClientRect: () => ({ width: 0 }) }, destino) === null && volarLobo({}, {}) === null, 'sin medidas, no vuela (y no rompe nada)');
+  delete globalThis.document;
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

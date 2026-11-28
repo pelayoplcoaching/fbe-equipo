@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.289': {
+    // (belleza 351-500, tanda G, segunda parte: el lobo, la noche y la salida)
+    atleta: [
+      'Al abrir la app, la noche de la portada es la de tu hora: la luna en su fase, la constelación del Lobo y, alguna noche, una estrella fugaz.',
+      'Al volver a abrir la app el mismo día, la portada es corta: solo el lobo. Y ya no se funde: se abre desde la luna y el lobo vuela dentro.',
+      'Al abrir la app, la luz de detrás del lobo es de tu color de acento.',
+    ],
+    coach: [
+      'La carga, 2.ª parte: el cielo de la hora, la luna en su fase, la portada corta al volver el mismo día y la salida que se abre desde la luna.',
+    ],
+  },
   '0.288': {
     // (belleza 351-500, tanda G, primera parte: el primer fotograma; «claude/belleza-500-propuesta.md»)
     atleta: [
