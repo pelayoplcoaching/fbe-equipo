@@ -216,7 +216,7 @@ console.log('334 · La pausa de las historias, también con un botón');
 
 console.log('341 · Novedades: dónde está lo nuevo');
 {
-  const { dondeNovedad } = await import('../web/src/logica/novedades-app.js');
+  const { dondeNovedad } = await import('../web/src/logica/novedades-donde.js');
   const casos = [
     ['En Ajustes, «Luz cálida de noche»: de 22:00 a 7:00…', 'En Ajustes'],
     ['Hoy, más tranquilo: lo de tu día arriba…', 'En Hoy'],
@@ -231,7 +231,8 @@ console.log('341 · Novedades: dónde está lo nuevo');
   check(mal.length === 0, `(341) cada frase dice dónde está lo nuevo, por cómo empieza (${casos.length - mal.length} de ${casos.length}${mal.length ? `; mal: ${mal.map(([t]) => t.slice(0, 20)).join(' | ')}` : ''})`);
   check(dondeNovedad('Mantén pulsada una sesión, un ejercicio o una receta para asomarte') === null && dondeNovedad('Tus datos se explican solos: toca un músculo') === null,
     '(341) si no empieza por un sitio, no se inventa (sale la marca de siempre)');
-  check(/const d = dondeNovedad\(t\);/.test(src('ui/Novedades.jsx')) && /<IcoIos n=\{d\[0\]\} \/>/.test(src('ui/Novedades.jsx')), '(341) en la hoja, con el icono del sitio y su nombre debajo de la frase');
+  const N = src('ui/Novedades.jsx');
+  check(/const d = donde\.current\(t\);/.test(N) && /<IcoIos n=\{d\[0\]\} \/>/.test(N) && /import\('\.\.\/logica\/novedades-donde\.js'\)/.test(N), '(341) en la hoja, con el icono del sitio y su nombre debajo de la frase (la tabla llega aparte, con la lista)');
 }
 
 console.log('342 · Una pista por gesto nuevo');
@@ -276,9 +277,9 @@ console.log('343 · Gestos en Ajustes, y «Solo botones»');
   check(/style=\{soloBotones\(\) \? 'opacity:1;pointer-events:auto' : undefined\}/.test(C), '(343) a cambio, el «Más opciones» de cada mensaje se ve (en el móvil va escondido: se mantenía pulsado)');
   const R = src('ui/Regla.jsx');
   check(/export function Regla\(props\) \{ return soloBotones\(\) \? null : <ReglaDentro \{\.\.\.props\} \/>; \}/.test(R), '(343) sin regla (al lado siguen el teclado o el − y el +)');
-  const A = src('ui/Ajustes.jsx');
-  const filas = (A.match(/^  \['[a-z-]+', '[^']+', '[^']+'\],$/gm) || []).length;
-  check(/function HojaGestos\(/.test(A) && /id="aj-solo-botones"/.test(A) && /cambiar\('soloBotones', v\)/.test(A) && filas >= 15 && /titulo="Gestos"/.test(A),
+  const A = src('ui/Ajustes.jsx'), HG = src('ui/HojaGestos.jsx');
+  const filas = (HG.match(/^  \['[a-z-]+', '[^']+', '[^']+'\],$/gm) || []).length;
+  check(/export function HojaGestos\(/.test(HG) && /id="aj-solo-botones"/.test(HG) && /cambiar\('soloBotones', v\)/.test(HG) && filas >= 15 && /titulo="Gestos"/.test(A) && /perezoso\(\(\) => import\('\.\/HojaGestos\.jsx'\), 'HojaGestos'/.test(A),
     `(343) «Gestos» en Ajustes: la lista de lo que se hace con el dedo (${filas}), con su botón, y el interruptor`);
   check(/  gesto: 'M10 16V6\.5/.test(src('ui/comunes.jsx')), '(343) con su icono (un dedo que toca)');
 }
@@ -286,8 +287,8 @@ console.log('343 · Gestos en Ajustes, y «Solo botones»');
 console.log('347 · Móviles lentos: lo nuevo, más sencillo');
 {
   check(/ligero\(\)/.test(src('ui/inclinacion.js')), '(347) con el modo ligero, las tarjetas no se inclinan con el móvil');
-  check(/:root\[data-ligero\] \.lb-borde \{ box-shadow: inset 0 0 0 var\(--filo-marca\) var\(--morado\); \}/.test(src('tacto-a.css')), '(347) la luz del borde, sin el halo (un filo quieto)');
-  check(/:root\[data-ligero\] \.cpt-brillo/.test(src('momentos.css')), '(347) las tarjetas para compartir, sin el brillo que corre');
+  check(/style=\{ligero \? 'box-shadow:inset 0 0 0 var\(--filo-marca\) var\(--morado\)' : undefined\}/.test(src('ui/atleta/DescansoGrande.jsx')), '(347) la luz del borde del descanso, sin el halo (solo el filo)');
+  check(/hasAttribute\('data-ligero'\)\) && <i class="cpt-brillo"/.test(src('ui/Compartir.jsx')), '(347) las tarjetas para compartir, sin el brillo que corre');
 }
 
 console.log(`\n${ok} bien, ${fallos} mal`);

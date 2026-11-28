@@ -182,7 +182,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   background: var(--hoja); color: var(--tinta); font-weight: 650; font-size: var(--letra-15-5); text-decoration: none;
 }
 .btn:hover { border-color: var(--tinta-3); }
-.btn:active, .btn-texto:active, .dia:active, .tarjeta-atleta:active, .fila-dia:active, .respuesta:active, .entreno:active, .vitrina-fila:active, .fila-semana:active { transform: scale(.985); }
+.btn:active, .btn-texto:active, .dia:active, .tarjeta-atleta:active, .fila-dia:active, .respuesta:active, .entreno:active, .fila-semana:active { transform: scale(.985); }
 .btn, .btn-texto { transition: transform var(--mov-instante) ease, background-color var(--mov-rapido) ease, border-color var(--mov-rapido) ease; }
 .btn svg { width: var(--ico-20); height: var(--ico-20); flex: none; }
 .btn-primario { background: var(--morado); border-color: var(--morado); color: var(--sobre-morado); box-shadow: 0 6px 16px -8px var(--acento-a70); }
@@ -255,7 +255,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .pips i.hecha { background: var(--morado); }
 
 /* ---------- Hoy ---------- */
-.hoy-pauta { display: grid; gap: var(--esp-2); }
 .ej-fila { display: grid; grid-template-columns: 14px 1fr auto; gap: var(--esp-12); align-items: center; padding: var(--esp-12) var(--esp-16); }
 .ej-fila .nombre { font-weight: 650; font-size: var(--letra-16); line-height: 1.25; }
 .ej-fila .pauta { font-size: var(--letra-13-5); color: var(--tinta-2); display: flex; flex-wrap: wrap; gap: var(--esp-2) var(--esp-10); }
@@ -508,13 +507,6 @@ html.hay-descanso .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px))
 .tabla-simple td { padding: var(--esp-8) var(--esp-10); border-bottom: var(--filo-fino) solid var(--linea); font-variant-numeric: tabular-nums; }
 /* Registro en el móvil: cada ejercicio en un bloque (nombre, pautado y hecho) en lugar de tres columnas estrechas */
 @media (max-width: 640px) {
-  .tabla-registro thead { display: none; }
-  .tabla-registro, .tabla-registro tbody, .tabla-registro tr, .tabla-registro td { display: block; }
-  .tabla-registro tr { padding: var(--esp-10) var(--esp-2); border-top: var(--filo-fino) solid var(--linea); display: grid; gap: var(--esp-4); }
-  .tabla-registro td { padding: 0; border: 0; }
-  .tabla-registro td:first-child { font-weight: 650; }
-  .tabla-registro td[data-etq]::before { content: attr(data-etq) ": "; color: var(--tinta-3); font-weight: 600; }
-  .tabla-registro .registro-serie > span { white-space: nowrap; }
 }
 .tabla-env { overflow-x: auto; }
 .registro-serie { font-variant-numeric: tabular-nums; font-size: var(--letra-14); }
@@ -691,14 +683,6 @@ img.medio { background: var(--hoja-2); }
 .record-serie strong { color: var(--morado); }
 @keyframes record-entra { from { transform: scale(.9); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .toast.record, .record-serie { animation: none; } }
-.vitrina-fila { width: 100%; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: var(--esp-12); align-items: center; padding: var(--esp-12) var(--esp-16); border: 0; background: none; text-align: left; color: var(--tinta); }
-.vitrina-fila:hover { background: var(--hoja-2); }
-.vitrina-fila .ico { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--hoja-2); color: var(--tinta-3); }
-.vitrina-fila .ico svg { width: var(--ico-18); height: var(--ico-18); }
-.vitrina-fila.reciente .ico { background: var(--morado-suave); color: var(--morado); }
-.vitrina-fila .texto { display: grid; gap: 1px; min-width: 0; }
-.vitrina-fila .valor { font-size: var(--letra-19); font-weight: 750; }
-.vitrina-fila .valor small { font-size: var(--letra-13); font-weight: 600; color: var(--tinta-2); }
 /* Con el temporizador de descanso abierto, los avisos van encima de él */
 
 /* v0.3: anillo de la semana, racha y calendario */
@@ -713,12 +697,6 @@ img.medio { background: var(--hoja-2); }
 .calendario { display: grid; grid-template-columns: 16px repeat(12, minmax(0, 1fr)); gap: var(--esp-4); max-width: 440px; align-items: center; }
 .cal-mes { font-size: var(--letra-11); color: var(--tinta-3); white-space: nowrap; overflow: visible; height: 14px; line-height: 14px; }
 .cal-dia { font-size: var(--letra-11); color: var(--tinta-3); text-align: center; }
-.cal-celda { display: block; aspect-ratio: 1; border-radius: var(--r-4); background: var(--hoja-2); box-shadow: var(--anillo); }
-.cal-celda.n1 { background: color-mix(in srgb, var(--morado) 30%, var(--hoja)); box-shadow: none; }
-.cal-celda.n2 { background: color-mix(in srgb, var(--morado) 62%, var(--hoja)); box-shadow: none; }
-.cal-celda.n3 { background: var(--morado); box-shadow: none; }
-.cal-celda.futuro { background: transparent; box-shadow: var(--anillo); opacity: .45; }
-.cal-celda.hoy { outline: 2px solid var(--tinta); outline-offset: 1px; }
 /* Barra fina de progreso de la sesión, bajo la cabecera */
 .barra-sesion { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--linea); }
 .barra-sesion span { display: block; height: 100%; background: var(--morado); border-radius: 0 var(--r-4) var(--r-4) 0; transition: width var(--mov-lento) ease; }
@@ -850,7 +828,6 @@ html.hay-enfoque .toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px));
 .tarjeta-semana-abrir strong { font-size: var(--letra-16-5); font-weight: 750; line-height: 1.25; }
 .tarjeta-semana-abrir .mini { color: var(--neutro-400); }
 .tarjeta-semana-abrir > svg { width: var(--ico-22); height: var(--ico-22); color: var(--acento-400); }
-.tarjeta-semana-disco { width: 54px; height: 54px; border-radius: 50%; background: radial-gradient(circle, var(--noche-1) 0 17%, var(--acento-400) 18% 30%, var(--noche-3) 31% 100%); box-shadow: inset 0 0 0 3px var(--noche-4); }
 .tarjeta-semana-quitar { position: absolute; top: 6px; right: 6px; color: var(--neutro-400); }
 .historia { --tiza: var(--neutro-950); --hoja: var(--noche-1); --hoja-2: var(--noche-2); --tinta: var(--marca-100); --tinta-2: var(--neutro-400); --tinta-3: var(--neutro-400); --linea: var(--noche-3);
   --morado: var(--marca-400); --sobre-morado: var(--neutro-950); --morado-suave: var(--noche-3); color-scheme: dark;
@@ -1013,7 +990,6 @@ kbd { font: 600 0.6875rem/1 var(--f); font-variant-numeric: tabular-nums; paddin
 .logro-niveles li > svg:last-child { color: var(--ok); width: var(--ico-20); height: var(--ico-20); }
 .logro-nuevo { display: grid; justify-items: center; text-align: center; gap: var(--esp-6); padding: var(--esp-6) 0 var(--esp-14); }
 .logro-nuevo p { margin: 0; }
-.logro-nuevo-titulo { font-size: var(--letra-19); margin-top: var(--esp-8) !important; }
 .logro-nuevos-resto { list-style: none; margin: var(--esp-10) 0 0; padding: 0; display: grid; gap: var(--esp-8); text-align: left; width: 100%; }
 .logro-nuevos-resto li { display: grid; grid-template-columns: 30px 1fr; gap: var(--esp-10); align-items: center; font-size: var(--letra-14); }
 .medalla.entra { animation: disco-entra .9s cubic-bezier(.2, .9, .25, 1.15) both; }
@@ -1038,12 +1014,8 @@ kbd { font: 600 0.6875rem/1 var(--f); font-variant-numeric: tabular-nums; paddin
 .semanas-barras li.futura .barra { background: var(--linea); }
 .semanas-barras .ok, .cumple-semanas .ok > .mini:first-child { color: var(--ok); }
 .semanas-barras .aviso { color: var(--aviso); }
-.barra-partida { display: flex; height: 12px; border-radius: var(--r-6); overflow: hidden; background: var(--linea); }
-.barra-partida span { background: var(--ok); }
-.barra-partida span.encima { background: var(--aviso); }
 .fila-record { display: grid; grid-template-columns: 22px 1fr; gap: var(--esp-10); align-items: start; padding: var(--esp-8) 0; font-size: var(--letra-14-5); }
 .fila-record > svg { width: var(--ico-20); height: var(--ico-20); color: var(--morado); margin-top: 1px; }
-.tarjeta-bloque .tarjeta-semana-disco { background: radial-gradient(circle, var(--noche-1) 0 16%, var(--neutro-300) 17% 30%, var(--disco-rojo) 31% 100%); }
 .cumple { margin-top: var(--esp-4); color: var(--tinta-3); white-space: nowrap; font-weight: 600; }
 .cumple.ok { color: var(--ok); }
 .cumple.aviso { color: var(--aviso); font-weight: 700; }
@@ -1130,9 +1102,6 @@ kbd { font: 600 0.6875rem/1 var(--f); font-variant-numeric: tabular-nums; paddin
 .bandeja-vacia svg { width: min(260px, 80%); height: auto; margin-bottom: var(--esp-6); }
 .bandeja-vacia h2 { margin: 0; font-size: var(--letra-24); font-stretch: 115%; }
 .bandeja-vacia p { margin: 0; max-width: 44ch; }
-.bv-soporte { fill: var(--tinta-3); }
-.bv-barra { fill: var(--tinta-2); }
-.bv-rojo { fill: var(--disco-rojo); } .bv-azul { fill: var(--disco-azul); } .bv-amarillo { fill: var(--disco-amarillo); }
 
 /* ---------- v0.7: avisos del coach ---------- */
 .aviso-coach { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: var(--esp-10); align-items: start; padding: var(--esp-12) var(--esp-6) var(--esp-12) var(--esp-14); border-radius: var(--r-s); background: var(--hoja); color: var(--tinta); box-shadow: inset 3px 0 0 var(--morado), var(--sombra); }
@@ -1447,17 +1416,6 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .nutricion-hoy.con-cifras { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-16); align-items: center; text-align: left; border: 0; border-radius: var(--r-s); padding: var(--esp-6) var(--esp-4); background: none; color: var(--tinta); cursor: pointer; font: inherit; }
 .nutricion-hoy.con-cifras:hover { background: var(--hoja-2); }
 .segmentos-dia button { min-height: 36px; font-size: var(--letra-14); }
-.macros-hoy { min-width: 0; }
-.macros-hoy .chip { justify-self: start; }
-.anillo-kcal { position: relative; display: inline-grid; place-items: center; flex: none; --c: var(--morado); }
-.anillo-kcal svg { position: absolute; inset: 0; }
-.anillo-kcal .pista { fill: none; stroke: var(--c); stroke-opacity: .16; stroke-width: 9; }
-.anillo-kcal .lleno { fill: none; stroke: var(--c); stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset var(--mov-lento) cubic-bezier(.2, .8, .2, 1); }
-.anillo-kcal.cumple { --c: var(--ok); }
-.anillo-kcal.pasado { --c: var(--aviso); }
-.anillo-kcal-texto { position: relative; display: grid; justify-items: center; line-height: 1.1; }
-.anillo-kcal-texto b { font-size: var(--letra-19); font-weight: 750; }
-.anillo-kcal-texto .mini { color: var(--tinta-3); }
 .barra-macro { display: grid; gap: var(--esp-4); }
 .barra-macro .barra { display: block; height: 7px; border-radius: var(--r-4); background: var(--hoja-2); overflow: hidden; }
 .barra-macro .barra i { display: block; height: 100%; border-radius: var(--r-4); background: var(--c); transition: width var(--mov-lento) cubic-bezier(.2, .8, .2, 1); }
@@ -1512,10 +1470,9 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .segmentos-actividad button { font-size: var(--letra-13-5); }
 @media (max-width: 380px) {
   .nutricion-hoy.con-cifras { grid-template-columns: 1fr; justify-items: center; }
-  .nutricion-hoy.con-cifras .macros-hoy { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .anillo-kcal .lleno, .barra-macro .barra i { transition: none; }
+  .barra-macro .barra i { transition: none; }
 }
 
 /* v0.12: notificaciones */
@@ -1761,8 +1718,8 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .perfil-cab { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: var(--esp-14); align-items: center; padding: var(--esp-4) var(--esp-2) var(--esp-2); }
 .perfil-cab h1 { font-size: var(--letra-24); }
 /* Filas pulsables de los paneles: la última redondea con la tarjeta */
-.lista > li:last-child > .respuesta, .lista > li:last-child > .entreno, .lista > li:last-child > .vitrina-fila, .lista > li:last-child > .fila-semana, .lista > li:last-child > .actividad-item { border-radius: 0 0 var(--r) var(--r); }
-.lista > li:first-child > .respuesta, .lista > li:first-child > .entreno, .lista > li:first-child > .vitrina-fila, .lista > li:first-child > .fila-semana, .lista > li:first-child > .actividad-item { border-radius: var(--r) var(--r) 0 0; }
+.lista > li:last-child > .respuesta, .lista > li:last-child > .entreno, .lista > li:last-child > .fila-semana, .lista > li:last-child > .actividad-item { border-radius: 0 0 var(--r) var(--r); }
+.lista > li:first-child > .respuesta, .lista > li:first-child > .entreno, .lista > li:first-child > .fila-semana, .lista > li:first-child > .actividad-item { border-radius: var(--r) var(--r) 0 0; }
 /* Sesión en curso: barra de progreso más visible y ejercicios con más aire */
 .barra-sesion { height: 4px; }
 .ejercicio-cab { padding: var(--esp-16) var(--esp-16) var(--esp-12); }
@@ -1818,10 +1775,6 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .cardio-totales { display: flex; flex-wrap: wrap; gap: var(--esp-6) var(--esp-16); font-size: var(--letra-14); color: var(--tinta-2); }
 .cardio-totales b { color: var(--tinta); font-variant-numeric: tabular-nums; }
 /* v0.17: mensajes con el coach (botón de la cabecera de Hoy) */
-.boton-mensajes { margin-left: var(--esp-2); color: var(--tinta-2); }
-.boton-mensajes .punto { position: relative; display: grid; place-items: center; }
-.boton-mensajes .punto::after { content: ""; position: absolute; top: -2px; right: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--alerta); border: var(--filo-fuerte) solid var(--tiza); }
-.cabecera .sub + .boton-mensajes { margin-left: var(--esp-4); }
 
 /* ===================================================================== v0.18: mensajes (chat) */
 .btn-avatar { border: 0; background: none; padding: 0; border-radius: 50%; cursor: pointer; display: inline-grid; }
@@ -2101,7 +2054,6 @@ input[type="range"] { accent-color: var(--morado); width: 100%; }
 .casilla-peq input { width: 18px; height: 18px; margin: 0; }
 .entrar-equipo { justify-items: start; }
 .entrar-equipo > * { justify-self: stretch; }
-.entrar-equipo > svg.entrar-equipo-ico { justify-self: start; width: 40px; height: 40px; color: var(--morado); }
 .entrar-equipo h2 { font-size: var(--letra-19); }
 .muro { gap: var(--esp-14); }
 .compositor .area { min-height: 64px; }
@@ -2135,8 +2087,6 @@ input[type="range"] { accent-color: var(--morado); width: 100%; }
 /* La tarjeta de un entreno */
 .entreno-equipo { display: grid; gap: var(--esp-10); padding: var(--esp-12); border-radius: var(--r-s); background: var(--hoja-2); box-shadow: var(--anillo-suave); }
 .ee-cab { display: flex; gap: var(--esp-10); align-items: center; }
-.ee-ico { width: 34px; height: 34px; border-radius: var(--r-10); display: grid; place-items: center; background: var(--morado); color: var(--sobre-morado); flex: none; }
-.ee-ico svg { width: var(--ico-20); height: var(--ico-20); }
 .ee-num { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-6); }
 .ee-num > div { background: var(--hoja); border-radius: var(--r-10); padding: var(--esp-8) var(--esp-10); display: grid; }
 .ee-num .v { font-size: var(--letra-20); font-weight: 750; }
@@ -2387,7 +2337,6 @@ input[type="range"] { accent-color: var(--morado); width: 100%; }
 .leyenda-linea { display: inline-block; width: 18px; height: 0; border-top: 2.5px solid var(--morado); vertical-align: middle; margin-right: var(--esp-4); }
 .leyenda-linea.pautada { border-top: var(--filo-fuerte) dashed var(--tinta-3); }
 /* Tu mes */
-.tarjeta-mes .tarjeta-semana-disco { background: radial-gradient(circle, var(--noche-1) 0 16%, var(--oro-300) 17% 30%, var(--acento-800) 31% 100%); }
 .calendario-mes { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--esp-6); max-width: 340px; }
 .calendario-mes .cal-cab { font-size: var(--letra-12); font-weight: 700; color: var(--tinta-3); text-align: center; }
 .calendario-mes .cal-dia { aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; font-size: var(--letra-12-5); font-variant-numeric: tabular-nums; color: var(--tinta-2); background: var(--hoja-2); }
@@ -2416,10 +2365,6 @@ input[type="range"] { accent-color: var(--morado); width: 100%; }
 .enlace-texto { color: var(--morado); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
 .vista-youtube { position: relative; display: block; width: 100%; max-width: 320px; aspect-ratio: 16 / 9; border-radius: var(--r-10); overflow: hidden; background: var(--negro); color: var(--blanco); text-decoration: none; }
 .vista-youtube img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.vista-youtube-play { position: absolute; inset: 0; display: grid; place-items: center; }
-.vista-youtube-play svg { width: 44px; height: 44px; padding: var(--esp-10); border-radius: 50%; background: rgba(0, 0, 0, .55); color: var(--blanco); }
-.vista-youtube-pie { position: absolute; left: 6px; bottom: 6px; display: inline-flex; align-items: center; gap: var(--esp-4); padding: var(--esp-2) var(--esp-8); border-radius: var(--r-pildora); background: rgba(0, 0, 0, .65); color: var(--blanco); font-weight: 700; }
-.vista-youtube-pie svg { width: var(--ico-14); height: var(--ico-14); stroke-width: 2; }
 /* Panel de negocio */
 .negocio-cifras { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 640px) { .negocio-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -2507,7 +2452,6 @@ input[type="range"] { accent-color: var(--morado); width: 100%; }
 .tabs-muchas .insignia { right: -8px; }
 
 /* ---------- Títulos grandes que se compactan al bajar ---------- */
-.cabecera-centinela { position: absolute; width: 1px; height: 1px; margin-top: 44px; pointer-events: none; visibility: hidden; }
 .cabecera-grande { transition: box-shadow var(--mov-breve) ease-out, background-color var(--mov-breve) ease-out; overflow-anchor: none; }
 .cabecera-grande .titulo h1 { font-size: var(--tipo-titulo); font-stretch: var(--ancho-expandido); font-weight: 800; line-height: var(--tipo-titulo-lh); letter-spacing: var(--tipo-titulo-tr); }
 .cabecera-grande .sub { font-size: var(--letra-14); margin-top: var(--esp-4); }
@@ -2838,8 +2782,6 @@ button.cr-celda { cursor: pointer; }
 .lista-records { list-style: none; margin: 0; padding: 0; }
 .lista-records li { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: var(--esp-10); align-items: center; padding: var(--esp-10) var(--esp-14); }
 .lista-records li + li { border-top: var(--filo-fino) solid var(--linea); }
-.lista-records-ico { width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center; background: var(--morado-suave); color: var(--morado); }
-.lista-records-ico svg { width: var(--ico-16); height: var(--ico-16); stroke-width: 2; }
 
 /* ---------- 6. Perfil: la cabecera y las listas agrupadas (como los Ajustes de iOS) ---------- */
 .perfil-cabeza { display: grid; justify-items: center; text-align: center; gap: var(--esp-12); padding: var(--esp-22) var(--esp-16) var(--esp-18); border-radius: calc(var(--r) + 4px); background: var(--hoja); box-shadow: var(--sombra); }
@@ -3240,7 +3182,6 @@ html.hay-portada-sesion body::before { background: transparent !important; backd
 .equipo-hoy .eh-cifra.alerta { color: var(--alerta); }
 .equipo-hoy .eh-cifra.cero { color: var(--tinta-2); }
 .equipo-hoy .eh-k { font-size: var(--tipo-pie); font-weight: 700; line-height: 1.25; text-wrap: balance; }
-.equipo-hoy .eh-sub { font-size: var(--letra-12); color: var(--tinta-2); }
 @media (min-width: 900px) { .equipo-hoy { max-width: 640px; } }
 
 /* ---------- 10. Comunidad: el aro de quien ha compartido un entreno hoy y la tarjeta del entreno ---------- */

@@ -144,7 +144,6 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .tarjeta-semana-abrir > svg { color: var(--morado); }
 .tarjeta-semana-quitar { color: var(--tinta-3); }
 .tarjeta-semana-disco,
-.tarjeta-mes .tarjeta-semana-disco { background: radial-gradient(circle, var(--hoja) 0 17%, var(--morado) 18% 30%, var(--morado-suave) 31% 100%); box-shadow: none; }
 
 /* ---------- 5. El color significa una sola cosa -------------------------------------------------------------
    Rojo = alerta o pendiente (y el disco «obligatorio», que siempre lleva forma de disco). Fuera de eso, los datos
@@ -3090,7 +3089,6 @@ nav.tabs .insignia { box-shadow: 0 0 0 var(--filo-fuerte) var(--tiza), 0 3px 8px
    Filas a franjas (en el escritorio), lo hecho un poco más marcado y lo que se quedó corto (por debajo del rango o
    pasado de esfuerzo) en una pastilla ámbar. */
 @media (min-width: 621px) { .tabla-registro tbody tr:nth-child(even) > td { background: color-mix(in srgb, var(--hoja-2) 65%, transparent); } }
-.tabla-registro td[data-etq="Hecho"] { color: var(--tinta); font-weight: 560; }
 .registro-serie .corto { padding: 0 var(--esp-4); border-radius: var(--r-6); background: color-mix(in srgb, var(--aviso) 14%, var(--hoja)); color: color-mix(in srgb, var(--aviso) 70%, var(--tinta)); }
 
 /* ── 239 · El cumplimiento con barras de luz (tanda 36) ───────────────────────────────────────────────────────────────

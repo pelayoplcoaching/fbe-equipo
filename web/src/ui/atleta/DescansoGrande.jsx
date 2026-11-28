@@ -51,7 +51,10 @@ export function LuzBorde({ quedan, total, pausado, fin }) {
   const final = !(quedan > 0) && vista.current;
   if (luz == null && !final) return null;
   const poner = (el) => { if (el && !el.dataset.lb) { el.dataset.lb = '1'; el.style.animationDelay = `${-(luz * LUZ_SEG).toFixed(2)}s`; } };
-  return <Capa><span key={final ? 'fin' : fin} ref={final ? undefined : poner} class={`lb-borde${final ? ' lb-fin' : ''}`} aria-hidden="true" /></Capa>;
+  // (belleza 347) con el modo ligero, solo el filo: sin el resplandor difuminado de toda la pantalla (por estilo en línea:
+  // una regla más en los estilos del arranque no cabe)
+  const ligero = typeof document !== 'undefined' && document.documentElement.hasAttribute('data-ligero');
+  return <Capa><span key={final ? 'fin' : fin} ref={final ? undefined : poner} class={`lb-borde${final ? ' lb-fin' : ''}`} style={ligero ? 'box-shadow:inset 0 0 0 var(--filo-marca) var(--morado)' : undefined} aria-hidden="true" /></Capa>;
 }
 
 // (207) El cartel. ajustar(s): ±15 s; saltar(); alCerrar()

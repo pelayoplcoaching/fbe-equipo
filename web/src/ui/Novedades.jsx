@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Hoja, Icono, IcoIos } from './comunes.jsx';
-import { novedadesQueVer, claveVersionVista, versionVistaInicial, dondeNovedad } from '../logica/novedades-app.js';
+import { novedadesQueVer, claveVersionVista, versionVistaInicial } from '../logica/novedades-app.js';
 import { clavePrivacidadLocal } from '../logica/privacidad.js';
 
 /* global __APP_VERSION__ */
@@ -22,13 +22,16 @@ export function AvisoNovedades({ uid, rol = 'atleta' }) {
   const [lista, setLista] = useState([]);
   const [ver, setVer] = useState(false);
   const hecho = useRef(false);
+  const donde = useRef(() => null);
   useEffect(() => {
     if (!uid) return undefined;
     const vista = leer(claveVersionVista(uid));
     if (vista === VERSION_APP) return undefined;
     let vivo = true;
-    import('../novedades.js').then(({ NOVEDADES }) => {
+    // (belleza 341) con la tabla de dónde está cada cosa, que también va aparte
+    Promise.all([import('../novedades.js'), import('../logica/novedades-donde.js')]).then(([{ NOVEDADES }, { dondeNovedad }]) => {
       if (!vivo) return;
+      donde.current = dondeNovedad;
       const l = novedadesQueVer(NOVEDADES, { vista, actual: VERSION_APP, rol });
       // Sin nada que contar de esta versión (un arreglo, o nada para el coach), queda vista igualmente
       if (!l.length) { guardar(claveVersionVista(uid), VERSION_APP); return; }
@@ -49,7 +52,7 @@ export function AvisoNovedades({ uid, rol = 'atleta' }) {
       <ul class="lista-novedades-app">
         {/* (belleza 341) cada frase, con el icono y el nombre del sitio donde está lo nuevo (si se sabe) */}
         {lista.map((t) => {
-          const d = dondeNovedad(t);
+          const d = donde.current(t);
           return d ? (
             <li key={t} style="grid-template-columns:auto 1fr"><IcoIos n={d[0]} /><span class="pila-xs"><span>{t}</span><span class="mini terciario">{d[1]}</span></span></li>
           ) : <li key={t}><Icono n="hecho" /><span>{t}</span></li>;

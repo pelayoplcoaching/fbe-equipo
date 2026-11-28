@@ -27,30 +27,6 @@ export function novedadesQueVer(novedades, { vista, actual, rol = 'atleta', max 
     .slice(0, max);
 }
 
-// (belleza 341) Dónde está lo nuevo: el icono y el nombre del sitio de la app del que habla cada frase. Se mira solo cómo
-// empieza (hasta los primeros dos puntos o punto, y sus primeras palabras): las frases se escriben a mano empezando por el
-// sitio («En Ajustes, …», «Hoy, …», «Al terminar tu sesión, …»), y así no hay que marcarlas. [icono, lugar], o null.
-const DONDE = [
-  [/\bAjustes\b/, 'ajustes', 'En Ajustes'],
-  [/«Más»/, 'opciones', 'En «Más»'],
-  [/\bRevisar\b/, 'video', 'En Revisar'],
-  [/\bcompart|fondo de pantalla/i, 'compartir', 'Al compartir'],
-  [/\b(la|tu) sesión\b|\bAl terminar una sesión\b|\bserie\b|\bdescanso\b/i, 'play', 'En la sesión'],
-  [/\bchat\b|\bMensajes\b/i, 'mensaje', 'En Mensajes'],
-  [/\bbiblioteca\b/i, 'biblioteca', 'En la biblioteca'],
-  [/\bProgreso\b/, 'progreso', 'En Progreso'],
-  [/\bSemana\b/, 'semana', 'En Semana'],
-  [/\bComidas\b|\brecetas?\b|\bmenú\b/i, 'receta', 'En Comidas'],
-  [/\bcheck-in\b/i, 'checkin', 'En el check-in'],
-  [/^Hoy\b|\ben Hoy\b/, 'hoy', 'En Hoy'],
-  [/\bAprende\b|\bguías?\b|\bapuntes\b/i, 'biblioteca', 'En Aprende'],
-];
-export function dondeNovedad(t) {
-  const inicio = String(t || '').split(/[:.]/)[0].split(/\s+/).slice(0, 6).join(' ');
-  const x = DONDE.find(([re]) => re.test(inicio));
-  return x ? [x[1], x[2]] : null;
-}
-
 // La versión vista se guarda en el móvil, por cuenta
 export const claveVersionVista = (uid) => `fbe-version-vista-${uid}`;
 // Las hojas de novedades empiezan en la 0.65: quien ya usaba la app no tiene nada guardado. La política de privacidad que vio

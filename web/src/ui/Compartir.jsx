@@ -1079,7 +1079,8 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
             )}
             <span class={`cpt-carta${['record', 'logro'].includes(tipo) || ['record', 'logro'].includes(datos?.tipo) || plantilla === 'record' ? ' cpt-tornasol' : ''}`} ref={carta} data-ig={comoInstagram ? '' : undefined}>
               <img class="tarjeta-img" src={img.url} alt={texto} ref={imgEl} draggable={false} />
-              <i class="cpt-brillo" aria-hidden="true" />
+              {/* (belleza 347) con el modo ligero, sin el brillo que la recorre */}
+              {!(typeof document !== 'undefined' && document.documentElement.hasAttribute('data-ligero')) && <i class="cpt-brillo" aria-hidden="true" />}
             </span>
             {comoInstagram && opciones.formato !== 'historia' && (
               <div class="marco-ig-pie" aria-hidden="true">
