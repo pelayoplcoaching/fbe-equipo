@@ -87,7 +87,7 @@
 /* B84 (v0.286) - Progreso, la fuerza: la lectura de la grafica en una linea ("Sube desde hace 3 semanas"), con su flecha
    en verde; "Estable", con su raya en la tinta suave. Sin cifras nuevas: lo dice la propia linea (logica/tendencia-fuerza.js). */
 .lct-linea:not(#n):not(#n):not(#n) { display: flex; align-items: center; gap: var(--esp-6); margin: 0; color: var(--tinta-2); font-weight: 560; }
-.lct-linea:not(#n):not(#n):not(#n) svg { flex: none; width: 16px; height: 16px; }
+.lct-linea:not(#n):not(#n):not(#n) svg { flex: none; width: var(--ico-16); height: var(--ico-16); }
 .lct-sube:not(#n):not(#n):not(#n) svg { color: var(--ok); }
 
 /* B58 (v0.286) - "Cuanto tiempo tienes hoy?": debajo de la opcion elegida, en que se te queda la sesion ("unos 28") o
@@ -127,4 +127,4 @@
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   .hoja-dialogo :is(.hoja-pie-fijo, form > .fila-botones:last-child):not(#n):not(#n):not(#n) { background: var(--hoja); backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
-@media (forced-colors: active) { .hoja-dialogo :is(.hoja-pie-fijo, form > .fila-botones:last-child):not(#n):not(#n):not(#n) { background: Canvas; border-top: 1px solid CanvasText; box-shadow: none; } }
+@media (forced-colors: active) { .hoja-dialogo :is(.hoja-pie-fijo, form > .fila-botones:last-child):not(#n):not(#n):not(#n) { background: Canvas; border-top: var(--filo-fino) solid CanvasText; box-shadow: none; } }
