@@ -8,6 +8,7 @@ import { TarjetaObjetivo } from '../Objetivos.jsx';
 import { PropuestasTuyas } from './ObjetivosTuyos.jsx';
 import { InformeBloque, ListaInformes } from '../InformeBloque.jsx';
 import { usePestanasDeslizables } from '../deslizar.js';
+import { tendenciaFuerza, textoTendencia } from '../../logica/tendencia-fuerza.js';
 import { FinDePagina, CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, GraficaFantasma, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas } from '../comunes.jsx';
 import { metaFuerza, metaPeso, ritmoFrenteMeta, CuerpoEnCifras, MiniLinea, BloqueAros, LineaAncha } from './ProgresoPiezas.jsx';
 import { Ampliable, GraficaComparar, FlechaCifra, DiasSemanaMini, EscaleraRecords, PodioRecords, useTrofeosNuevos } from './ProgresoPiezas2.jsx';
@@ -163,7 +164,9 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
   // (v0.203) esta semana (aún en curso) o la pasada (cerrada)
   const volPasada = semanaVol === 'pasada';
   const volFuente = volPasada ? volumen.anterior : volumen.estaSemana;
-  const grupos = GRUPOS.map(([g, n]) => [g, n, volFuente[g] || 0, volPasada ? 0 : volumen.anterior[g] || 0]).filter(([, , a, b]) => a || b);
+  // (belleza B94, v0.286) las barras, de más a menos series (a igualdad, la semana anterior y luego el orden de siempre)
+  const grupos = GRUPOS.map(([g, n]) => [g, n, volFuente[g] || 0, volPasada ? 0 : volumen.anterior[g] || 0]).filter(([, , a, b]) => a || b)
+    .sort((x, y) => y[2] - x[2] || y[3] - x[3]);
   const objetivoVol = datos.volumenObjetivo;
   const maxVol = Math.max(24, ...grupos.map(([g, , a, b]) => Math.max(a, b, rangoVolumen(objetivoVol, g)[1] + 4)));
   const conMedida = MEDIDAS.filter(([k]) => medidas.some((m) => m[k] != null));
@@ -306,6 +309,8 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
                     <CifraSube texto={pesoNum(ult.valor, 1)} clase="v num" /><span class="u">{etiquetaPeso()}, semana del {fmtCorta(ult.semana)}</span>
                     {ganado != null && <span class={`chip num ${ganado > 0 ? 'ok' : ''}`}><Odometro texto={`${conSigno(difVista(ganado))} ${etiquetaPeso()}`} /> en {nombreRango(rF)}</span>}
                   </div>
+                  {/* (belleza B84, v0.286) la lectura de la gráfica, en una línea: lo que dice su propia línea */}
+                  {(() => { const t = tendenciaFuerza(pts); return t && <p class={`mini lct-linea lct-${t.tipo}`}><Icono n={t.tipo === 'sube' ? 'arriba' : 'menos'} /> {textoTendencia(t)}</p>; })()}
                   {pts.length > 1 ? graficaFuerza()
                     : ej.puntos.length > 1 ? <p class="peq secundario">En este rango hay menos de dos semanas con datos: prueba uno más amplio.</p>
                       : <GraficaFantasma texto="Con dos semanas de datos aparece la gráfica." />}

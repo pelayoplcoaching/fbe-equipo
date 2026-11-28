@@ -126,8 +126,13 @@ export function PlanSemana({ semana, sesiones, alCambiar, compacto = false, solo
             <Icono n="rayo" /> Repartir por mí
           </button>
         )}
-        {conDia.length > 0 && <button class="btn btn-peq" onClick={() => setCalendario(true)}><Icono n="calendario" /> Añadir a mi calendario</button>}
-        {conDia.length > 0 && <button class="btn btn-peq" onClick={() => setCompartirSemana(true)}><Icono n="compartir" /> Compartir mi semana</button>}
+        {/* (belleza B77, v0.286) calendario y compartir, dos botones redondos de icono a la derecha (antes, dos filas) */}
+        {conDia.length > 0 && (
+          <span class="pln-icos">
+            <button type="button" class="btn btn-icono plano pln-ico" onClick={() => setCalendario(true)} aria-label="Añadir a mi calendario" title="Añadir a mi calendario"><Icono n="calendario" /></button>
+            <button type="button" class="btn btn-icono plano pln-ico" onClick={() => setCompartirSemana(true)} aria-label="Compartir mi semana" title="Compartir mi semana"><Icono n="compartir" /></button>
+          </span>
+        )}
       </div>
       {compartirSemana && <HojaCompartir logro tipo="plan" titulo="Compartir mi semana" datos={datosPlanSemana(semana, sesiones, hoy)} equipo={{ tema: 'general' }} alCerrar={() => setCompartirSemana(false)} />}
       {!compacto && (conDia.length > 0

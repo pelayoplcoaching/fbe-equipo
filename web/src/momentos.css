@@ -78,3 +78,14 @@
 @media (max-width: 480px) { .sesion-vista > .cabecera .titulo h1:not(#n):not(#n):not(#n) { font-stretch: 100%; text-wrap: balance; } }
 @media (prefers-reduced-motion: reduce) { .ses-aro-a:not(#n):not(#n):not(#n) { transition: none; } }
 @media (forced-colors: active) { .ses-aro-a:not(#n):not(#n):not(#n) { stroke: Highlight; } .ses-aro-c:not(#n):not(#n):not(#n) { stroke: CanvasText; } }
+
+/* B77 (v0.286) - Semana: "Anadir a mi calendario" y "Compartir mi semana", dos botones redondos de icono a la derecha de la
+   fila de acciones (antes, dos filas de texto). Su nombre, en aria-label y en title. */
+.pln-icos:not(#n):not(#n):not(#n) { display: inline-flex; gap: var(--esp-8); margin-left: auto; }
+.pln-ico:not(#n):not(#n):not(#n) { border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
+
+/* B84 (v0.286) - Progreso, la fuerza: la lectura de la grafica en una linea ("Sube desde hace 3 semanas"), con su flecha
+   en verde; "Estable", con su raya en la tinta suave. Sin cifras nuevas: lo dice la propia linea (logica/tendencia-fuerza.js). */
+.lct-linea:not(#n):not(#n):not(#n) { display: flex; align-items: center; gap: var(--esp-6); margin: 0; color: var(--tinta-2); font-weight: 560; }
+.lct-linea:not(#n):not(#n):not(#n) svg { flex: none; width: 16px; height: 16px; }
+.lct-sube:not(#n):not(#n):not(#n) svg { color: var(--ok); }
