@@ -3,8 +3,11 @@
 // pone al día lo que se está viendo, sin recargar la app: cada carga montada (useCarga) se repite en silencio.
 // No actúa con una ventana abierta, dentro de un chat o de una sesión, ni al tirar de algo que se arrastra o se
 // desliza de lado. La rueda sigue al dedo; pasado el umbral, un toque háptico, y al soltar, gira hasta que llega todo.
+// (belleza 173, v0.285) En la rueda, el lobo se dibuja con el dedo (su trazo sigue a --lleno), al pasar el umbral se
+// rellena, y mientras llega todo, una luz recorre su trazo (estilos en diseno.css, «tirar-lobo»)
 
 import { vibrar } from './hapticos.js';
+import { LOBO_CAJA, loboD } from './lobo-trazo.js';
 
 const UMBRAL = 72;      // lo que hay que tirar (ya con la resistencia) para que recargue al soltar
 const TOPE = 110;       // hasta dónde baja la rueda
@@ -34,7 +37,7 @@ export function instalarTirar(d = typeof document !== 'undefined' ? document : n
       rueda = d.createElement('div');
       rueda.className = 'tirar';
       rueda.setAttribute('aria-hidden', 'true');
-      rueda.innerHTML = '<span class="tirar-rueda"></span>';
+      rueda.innerHTML = `<svg class="tirar-lobo" viewBox="${LOBO_CAJA}" focusable="false"><path class="tirar-lobo-lleno" fill-rule="evenodd" d="${loboD()}"/><path class="tirar-lobo-trazo" pathLength="1" d="${loboD()}"/></svg>`;
       d.body.appendChild(rueda);
     }
     return rueda;

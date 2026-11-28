@@ -884,7 +884,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
   return (
     <>
     <div class={`contenido sesion-vista ${recienEmpezada ? 'sesion-tras-portada' : ''} ${sesion.completada ? 'sesion-hecha' : ''}`} inert={verEnfoque ? '' : undefined} aria-hidden={verEnfoque ? 'true' : undefined}>
-      <header class={`cabecera ${tramos.length ? 'con-tramos' : ''}`}>
+      <header class={`cabecera ${tramos.length ? 'con-tramos' : ''}${tramos.length && quedanMin != null ? ' con-queda' : ''}`}>
         {supera && <AvisoSupera s={supera} />}
         <button class="btn btn-icono plano" onClick={alCerrar} aria-label="Volver"><Icono n="atras" /></button>
         <div class="titulo">
@@ -894,7 +894,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
         {ejercicios.length > 0 && !sesion.completada && <button class="btn btn-icono plano" onClick={() => abrirEnfoque()} aria-label="Modo enfoque"><Icono n="enfoque" /></button>}
         {!ejercicios.length && <button class="btn btn-icono plano" onClick={() => setIntervalos({ inicial: delCoach })} aria-label="Temporizador de intervalos"><Icono n="intervalos" /></button>}
         <button class="btn btn-icono plano" onClick={() => setCalculadora(true)} aria-label="Calculadora"><Icono n="calculadora" /></button>
-        {ejercicios.length > 0 && <Cronometro inicio={sesion.completada ? null : inicio} minutos={sesion.completada ? sesion.duracion_min : null} hechas={todas.length} total={totalPautadas} queda={quedanMin} />}
+        {ejercicios.length > 0 && <Cronometro inicio={sesion.completada ? null : inicio} minutos={sesion.completada ? sesion.duracion_min : null} hechas={todas.length} total={totalPautadas} queda={tramos.length ? null : quedanMin} />}
         {tramos.length > 0 ? (
           <nav class="tramos" aria-label="Ejercicios de la sesión">
             <ol>
@@ -916,6 +916,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
             <span style={{ width: `${Math.min(100, (todas.length / totalPautadas) * 100)}%` }} />
           </div>
         )}
+        {/* (belleza B59, v0.285) lo que falta, a la derecha de los tramos, como el tiempo junto a la barra de un vídeo: dentro
+            del reloj ensanchaba su columna y el nombre de la sesión se partía («Torso» / «B») */}
+        {tramos.length > 0 && quedanMin != null && <span class="queda-min ses-queda">faltan unos {quedanMin} min</span>}
       </header>
       {/* (054) la sesión que se cerró sola: pedir cómo fue */}
       {(() => { const c = textoCierreAuto(sesion); return c && (
@@ -1139,10 +1142,12 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
 
 function Cronometro({ inicio, minutos, hechas, total, queda = null }) {
   const ahora = useAhora(1000);
+  // (belleza B59, v0.285) junto a las series, un aro fino con lo hecho (decorativo: el número lo dice)
+  const frac = total > 0 ? Math.min(1, hechas / total) : 0;
   return (
     <div class="crono" style="text-align:right">
       <div class={`num crono-reloj${minutos == null && inicio ? ' corre' : ''}`} style="font-size:1.0625rem">{minutos != null ? `${minutos} min` : inicio ? mmss((ahora - inicio) / 1000) : '0:00'}</div>
-      <div class="sesion-cab-num"><Odometro texto={String(hechas)} />/{total} series</div>
+      <div class="sesion-cab-num">{total > 0 && <svg class="ses-aro" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle class="ses-aro-c" cx="10" cy="10" r="7.5" /><circle class="ses-aro-a" cx="10" cy="10" r="7.5" pathLength="1" style={`stroke-dashoffset:${(1 - frac).toFixed(3)}`} /></svg>}<Odometro texto={String(hechas)} />/{total} series</div>
       {queda != null && <div class="queda-min">faltan unos {queda} min</div>}
     </div>
   );

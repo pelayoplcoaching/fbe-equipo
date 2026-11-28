@@ -1,14 +1,14 @@
 // Ilustraciones de la v0.50: dibujos de línea propios, en el estilo del lobo de FBE (su silueta, solo el trazo), para
 // los estados vacíos y la tarjeta de Hoy. Se pintan con los colores del tema (clases ilu-*, en estilos.css): en
 // claro, oscuro y negro puro, y con cualquier acento. Son decorativas (aria-hidden): lo que dicen va en el texto.
-import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
+import { LOBO_CAJA, loboD } from './lobo-trazo.js';
 
 // El lobo en línea: su trazado, sin relleno, con el grosor de los iconos aunque se pinte pequeño
 function Lobo({ x, y, w, clase = 'ilu-acento' }) {
   const [, , cw, ch] = LOBO_CAJA.split(' ').map(Number);
   return (
     <svg x={x} y={y} width={w} height={(w * ch) / cw} viewBox={LOBO_CAJA} overflow="visible">
-      <path class={clase} d={LOBO_D} fill-rule="evenodd" vector-effect="non-scaling-stroke" />
+      <path class={clase} d={loboD()} fill-rule="evenodd" vector-effect="non-scaling-stroke" />
     </svg>
   );
 }

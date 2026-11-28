@@ -14,6 +14,11 @@ import { soloBotones } from './ajustes.js';
 export const SIN_DESLIZAR = '.grafica-caja, .selector-chips, .semanas-tabs, .filtros-muro, .tira-fotos, .tm-lista, .pestanas, .chat-busqueda-tipos, .dias-deslizar, .galeria-pista, .reloj-descanso, .entrada-menu, .paso, .segmentos, input, textarea, select, video, [data-sin-deslizar], .velo, [aria-modal="true"]';
 
 const UMBRAL = 56;          // px de recorrido que bastan
+// (belleza 346, v0.285) Sin instalar, el navegador usa los bordes de la pantalla para ir atrás y adelante (Safari):
+// desde ahí, el gesto es suyo y no también nuestro. Instalada (o con ratón), todo el ancho vale
+const BORDE = 24;
+const enBorde = (e) => e.pointerType !== 'mouse' && (e.clientX < BORDE || e.clientX > window.innerWidth - BORDE)
+  && !(window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone);
 const LANZA = 0.45;         // px/ms: un golpe así de rápido basta…
 const LANZA_MIN = 22;       // …con este recorrido mínimo
 
@@ -50,7 +55,7 @@ export function useDeslizar(alPasar, { ignorar = SIN_DESLIZAR, hay = null, nombr
     setTimeout(() => el.parentElement?.classList.remove('recorta-x'), 260);
   };
   return {
-    onPointerDown: (e) => { if (e.button > 0 || soloBotones() || (ignorar && e.target.closest?.(ignorar))) return; g.current = { x: e.clientX, y: e.clientY, id: e.pointerId, activo: false, pasos: [], listo: false }; },
+    onPointerDown: (e) => { if (e.button > 0 || soloBotones() || enBorde(e) || (ignorar && e.target.closest?.(ignorar))) return; g.current = { x: e.clientX, y: e.clientY, id: e.pointerId, activo: false, pasos: [], listo: false }; },
     onPointerMove: (e) => {
       const s = g.current;
       if (!s || s.id !== e.pointerId) return;

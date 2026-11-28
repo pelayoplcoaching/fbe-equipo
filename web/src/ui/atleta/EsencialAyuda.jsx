@@ -474,7 +474,7 @@ function HistoriaRevisionPantalla({ semanaId = null, n = null, alEntera, alCerra
         {pantallas.map((x, k) => <span key={x.id} class={k < i ? 'vista' : k === i ? `actual ${quieto ? '' : 'corre rvh-corre'}` : ''}><i /></span>)}
       </div>
       <button class="btn btn-icono plano historia-cerrar" onClick={alCerrar} aria-label="Cerrar tu revisión"><Icono n="cerrar" /></button>
-      {!quieto && p && <button type="button" class="btn btn-icono plano historia-cerrar" style="right:auto;left:max(var(--esp-12),env(safe-area-inset-left,0px))" aria-pressed={pausa ? 'true' : 'false'} aria-label={pausa ? 'Seguir la historia' : 'Pausar la historia'} onClick={alternarPausa}><Icono n={pausa ? 'play' : 'pausa'} /></button>}
+      {!quieto && p && <button type="button" class="btn btn-icono plano historia-cerrar" style="right:auto;left:max(var(--esp-12),env(safe-area-inset-left,0px))" aria-label={pausa ? 'Seguir la historia' : 'Pausar la historia'} onClick={alternarPausa}><Icono n={pausa ? 'play' : 'pausa'} /></button>}
       {p ? (
         <div class="historia-pantalla" key={p.id} aria-live="polite">
           {p.render()}

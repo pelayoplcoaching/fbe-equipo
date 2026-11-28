@@ -56,7 +56,13 @@ export const estiloPortada = () => `<style>
 @media (prefers-reduced-motion:reduce){#portada,#portada .portada-centro{transition:none}#portada::before,#portada::after,#portada .portada-luna{animation:none}#portada .portada-lobo,#portada .portada-lobo-relleno,#portada .portada-nombre,#portada .portada-filo,#portada .portada-lema,#portada .portada-firma,#portada .portada-firma-2{animation:none}#portada .portada-lobo-trazo{display:none}#portada .portada-carga span{animation:none;width:100%;opacity:.55}}
 </style>`;
 
-export const marcadoPortada = `<div id="portada" role="status" aria-label="Abriendo FBE Equipo">
+// (belleza 339, v0.285) El trazado del lobo, una vez y escondido, fuera de la portada (que se quita al abrir): la app lo
+// lee de aquí (loboD() en web/src/ui/lobo-trazo.js) en vez de llevarlo en su código de arranque. (Escondido con su estilo:
+// el atributo «hidden» no esconde un <svg>.)
+export const spriteLobo = `<svg id="fbe-sprite" style="display:none" aria-hidden="true" focusable="false"><path id="fbe-lobo" d="${LOBO_D}"/></svg>`;
+
+export const marcadoPortada = `${spriteLobo}
+<div id="portada" role="status" aria-label="Abriendo FBE Equipo">
 <div class="portada-centro" aria-hidden="true">
 <div class="portada-noche"><span class="portada-luna"></span><svg class="portada-lobo" viewBox="${LOBO_CAJA}" focusable="false"><path class="portada-lobo-trazo" pathLength="1" fill="none" d="${LOBO_D}"/><path class="portada-lobo-relleno" fill-rule="evenodd" d="${LOBO_D}"/></svg></div>
 <div class="portada-nombre">FBE Equipo</div>

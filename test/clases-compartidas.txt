@@ -1061,7 +1061,6 @@ tira-letra: diseno.css estilos.css
 tira-momentos: diseno.css equipo-belleza.css estilos.css
 tira-num: diseno.css estilos.css
 tirar: diseno.css pulido.css
-tirar-rueda: diseno.css pulido.css
 titular: ambas-a.css belleza-a.css diseno.css estilos.css
 titulo: ambas-a.css belleza.css diseno.css estilos.css vista-c.css
 tm-circulo: diseno.css estilos.css

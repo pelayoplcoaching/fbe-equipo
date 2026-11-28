@@ -215,8 +215,10 @@ function CocinaDentro({ receta, nombre, pasos, lineas = [], alCerrar }) {
       {verIng
         ? <div class="coc-cuerpo coc-cuerpo-ing" tabIndex={0} role="group" aria-label="Ingredientes"><Ingredientes receta={receta} lineas={lineas} /></div>
         : (
-          <div class="coc-cuerpo" tabIndex={0} role="group" aria-label={`Paso ${i + 1} de ${n}`} onPointerDown={baja} onPointerMove={mueve} onPointerUp={sube} onPointerCancel={sube}>
-            <p key={i} ref={paso} class="coc-paso" aria-live="polite"><PasoConTiempos texto={pasos[i]} receta={receta} nombre={nombre} /></p>
+          // (belleza 333, v0.285) lo que se anuncia, en el contenedor, que no cambia: el párrafo de cada paso es nuevo (key) y
+          // un aviso que nace ya con su texto no lo leen todos los lectores de pantalla
+          <div class="coc-cuerpo" tabIndex={0} role="group" aria-label={`Paso ${i + 1} de ${n}`} aria-live="polite" onPointerDown={baja} onPointerMove={mueve} onPointerUp={sube} onPointerCancel={sube}>
+            <p key={i} ref={paso} class="coc-paso"><PasoConTiempos texto={pasos[i]} receta={receta} nombre={nombre} /></p>
           </div>
         )}
       <PastillaCocina />

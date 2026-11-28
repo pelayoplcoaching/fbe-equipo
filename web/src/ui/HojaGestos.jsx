@@ -9,6 +9,7 @@ const GESTOS = [
   ['intercambiar', 'Deslizar a los lados', 'Cambia de pestaña y de semana. O toca la pestaña o la flecha.'],
   ['hecho', 'Deslizar una fila a la derecha', 'Marca la serie, el hábito o la tarea. O toca su casilla.'],
   ['ojo-abierto', 'Mantener pulsado', 'Asoma una sesión, un ejercicio, una receta o una medalla; en una serie, abre sus kilos. O tócala.'],
+  ['basura', 'Lo delicado', 'Borrar o quitar algo importante: mantenlo pulsado un segundo y se hace sin preguntar. O tócalo y confirma.'],
   ['hoy', 'La barra de abajo', 'Desliza el pulgar para cambiar de sección o mantén una pulsada para sus atajos. O toca cada sección.'],
   ['play', 'Las historias', 'Mantén pulsado para pararla, desliza hacia abajo para cerrarla y de lado para pasar. O la pausa, la ✕ y tocar los lados.'],
   ['abajo', 'Las hojas', 'Arrástralas hacia abajo para cerrarlas. O toca la ✕.'],

@@ -3,7 +3,7 @@
 // en su sitio; en el navegador, test/e2e-momentos.mjs. (v0.282) Sentir el récord (312-315): la serie que puede serlo, la
 // última de la sesión, la ola de la mitad y el primer récord de tu vida.
 //   node test/momentos.test.mjs
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { melodiaSesion, ordenMusculos, esPrimerRecord, CLAVE_PRIMER_RECORD } from '../web/src/logica/sesion-final.js';
 import { nota, SONIDOS, puedeSonar, prioridadDe, duracionDe, volumenDe, ESCUCHAR, SUSURRO } from '../web/src/logica/sonido.js';
 import { subidaRecord, resumenSemanal } from '../web/src/logica/calculos.js';
@@ -207,8 +207,8 @@ console.log('330 · Nada gasta cuando no se ve');
 console.log('334 · La pausa de las historias, también con un botón');
 {
   const T = src('ui/historia-tacto.js');
-  check(/export function BotonPausa\(\{ pausa, alternar \}\)/.test(T) && /'aria-pressed': pausa/.test(T) && /Pausar la historia/.test(T) && /Seguir la historia/.test(T),
-    '(334) un botón de pausa arriba, a la izquierda (dice si está parada)');
+  check(/export function BotonPausa\(\{ pausa, alternar \}\)/.test(T) && /'aria-label': pausa \? 'Seguir la historia' : 'Pausar la historia'/.test(T) && !/aria-pressed/.test(T),
+    '(334) un botón de pausa arriba, a la izquierda (su nombre dice lo que hará; 333: sin aria-pressed, que lo leía doble)');
   check(/e\.key !== ' ' \|\| document\.querySelectorAll\('\[aria-modal="true"\]'\)\.length > 1/.test(T), '(334) y con la barra espaciadora (solo en la de arriba, y no si el foco está en un botón)');
   const n = ['ui/atleta/HistoriaSesion.jsx', 'ui/atleta/TuAnio.jsx', 'ui/atleta/TuMes.jsx', 'ui/atleta/TuSemana.jsx'].filter((r) => /<BotonPausa pausa=\{pausa\} alternar=\{alternarPausa\} \/>/.test(src(r))).length;
   check(n === 4 && /aria-label=\{pausa \? 'Seguir la historia' : 'Pausar la historia'\} onClick=\{alternarPausa\}/.test(src('ui/atleta/EsencialAyuda.jsx')), `(334) en las cuatro historias y en la de tu revisión (${n} de 4)`);
@@ -251,7 +251,7 @@ console.log('343 · Gestos en Ajustes, y «Solo botones»');
     '(343) «Solo botones», apagado de serie (y solo se enciende de verdad)');
   check(soloBotones() === false && /r\.toggleAttribute\('data-solo-botones', a\.soloBotones === true\)/.test(src('ui/ajustes.js')), '(343) se mira en la raíz (sin pantalla, nunca)');
   const gestos = [
-    ['ui/deslizar.js', /onPointerDown: \(e\) => \{ if \(e\.button > 0 \|\| soloBotones\(\) \|\| \(ignorar/, 'deslizar entre pestañas y semanas'],
+    ['ui/deslizar.js', /onPointerDown: \(e\) => \{ if \(e\.button > 0 \|\| soloBotones\(\) \|\| enBorde\(e\) \|\| \(ignorar/, 'deslizar entre pestañas y semanas'],
     ['ui/deslizar.js', /onPointerDown: \(e\) => \{ if \(e\.button > 0 \|\| soloBotones\(\)\) return; filaEnCurso/, 'deslizar una fila para marcarla'],
     ['ui/atleta/asomar.jsx', /e\.pointerType === 'mouse' \|\| soloBotones\(\)\) return;/, 'asomarse'],
     ['ui/atleta/barra-gestos.jsx', /e\.button > 0 \|\| g \|\| soloBotones\(\)\) return;/, 'la barra de abajo'],
@@ -270,6 +270,7 @@ console.log('343 · Gestos en Ajustes, y «Solo botones»');
     ['ui/IndiceLateral.jsx', /e\.pointerId === st\.id && !soloBotones\(\)/, 'recorrer el índice'],
     ['ui/Chat.jsx', /seleccionando \|\| soloBotones\(\)\) return;/, 'deslizar o mantener un mensaje'],
     ['ui/chat/Visor.jsx', /a\.modo = soloBotones\(\) \? 'nada' :/, 'deslizar una foto'],
+    ['ui/Mantener.jsx', /e\.button > 0 \|\| deshabilitado \|\| soloBotones\(\)\) return;/, 'mantener pulsado lo delicado (v0.285)'],
   ];
   const sin = gestos.filter(([r, re]) => !re.test(src(r))).map(([, , t]) => t);
   check(sin.length === 0, `(343) con «Solo botones», ningún gesto hace nada (${gestos.length - sin.length} de ${gestos.length}${sin.length ? `; faltan: ${sin.join(', ')}` : ''})`);
@@ -289,6 +290,46 @@ console.log('347 · Móviles lentos: lo nuevo, más sencillo');
   check(/ligero\(\)/.test(src('ui/inclinacion.js')), '(347) con el modo ligero, las tarjetas no se inclinan con el móvil');
   check(/style=\{ligero \? 'box-shadow:inset 0 0 0 var\(--filo-marca\) var\(--morado\)' : undefined\}/.test(src('ui/atleta/DescansoGrande.jsx')), '(347) la luz del borde del descanso, sin el halo (solo el filo)');
   check(/hasAttribute\('data-ligero'\)\) && <i class="cpt-brillo"/.test(src('ui/Compartir.jsx')), '(347) las tarjetas para compartir, sin el brillo que corre');
+}
+
+console.log('v0.285 · El repaso');
+{
+  const T = src('ui/tirar.js'), D = src('diseno.css'), PU = src('pulido.css');
+  check(/import \{ LOBO_CAJA, loboD \} from '\.\/lobo-trazo\.js';/.test(T) && /class="tirar-lobo-lleno" fill-rule="evenodd"/.test(T) && /class="tirar-lobo-trazo" pathLength="1"/.test(T) && !/tirar-rueda/.test(T),
+    '(173) al tirar para actualizar, en la rueda va el lobo (relleno y trazo), no la luna');
+  check(/\.tirar-lobo-trazo \{[^}]*stroke-dasharray: 1; stroke-dashoffset: calc\(1 - var\(--lleno, 0\)\)/.test(D) && /body > \.tirar\.lista \.tirar-lobo-lleno \{ fill-opacity: 1; \}/.test(D),
+    '(173) su trazo sigue al dedo (--lleno) y, pasado el umbral, se rellena');
+  check(/\n  body > \.tirar\.girando \.tirar-lobo-trazo \{ stroke: var\(--blanco\); stroke-dasharray: \.16 \.84; animation: tirar-luz 1\.6s linear infinite; \}\n\}/.test(D) && /@media \(prefers-reduced-motion: reduce\) \{ body > \.tirar\.girando \.tirar-lobo-trazo \{ stroke-dashoffset: 0; \} \}/.test(D),
+    '(173) mientras llega todo, una luz recorre su trazo; con «reducir movimiento», quieto y entero');
+  check(!/tirar-rueda/.test(D) && !/tirar-rueda/.test(PU) && /@keyframes tirar-gira/.test(PU), '(173) fuera los estilos de la rueda antigua (el giro sigue: lo usa «Guardando»)');
+  const DS = src('ui/deslizar.js');
+  check(/const BORDE = 24;/.test(DS) && /display-mode: standalone/.test(DS) && /soloBotones\(\) \|\| enBorde\(e\) \|\|/.test(DS),
+    '(346) sin instalar, deslizar de lado no empieza en los bordes de la pantalla (son del navegador); instalada o con ratón, sí');
+  {
+    // (339) el trazado del lobo, fuera del código de arranque: la app lo lee del index.html (una vez, escondido)
+    const lista = (d) => readdirSync(new URL(`../web/src/${d}`, import.meta.url), { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? lista(`${d}${e.name}/`) : /\.(js|jsx)$/.test(e.name) ? [`${d}${e.name}`] : []));
+    const conConst = lista('').filter((r) => r !== 'ui/lobo-trazo.js' && /\bLOBO_D\b/.test(src(r)));
+    const L = src('ui/lobo-trazo.js'), PO = readFileSync(new URL('../scripts/portada.mjs', import.meta.url), 'utf8');
+    check(conConst.length === 0 && /export function loboD\(\)/.test(L) && /document\.getElementById\('fbe-lobo'\)\?\.getAttribute\('d'\)/.test(L)
+      && /export const spriteLobo = `<svg id="fbe-sprite" style="display:none" aria-hidden="true" focusable="false"><path id="fbe-lobo" d="\$\{LOBO_D\}"\/><\/svg>`;/.test(PO) && /export const marcadoPortada = `\$\{spriteLobo\}/.test(PO),
+      `(339) el trazado del lobo ya no va en el código: se lee del index.html, donde va una vez escondido (fuera de la portada, que se quita)${conConst.length ? `; aún lo importan: ${conConst.join(', ')}` : ''}`);
+  }
+  {
+    // (B59) la cabecera de la sesión: lo que falta, a la derecha de los tramos; junto a las series, un aro; el nombre, en una línea
+    const SE = src('ui/atleta/Sesion.jsx'), M = src('momentos.css');
+    check(/\{tramos\.length > 0 && quedanMin != null && <span class="queda-min ses-queda">faltan unos \{quedanMin\} min<\/span>\}/.test(SE) && /queda=\{tramos\.length \? null : quedanMin\}/.test(SE)
+      && /<svg class="ses-aro" viewBox="0 0 20 20" aria-hidden="true" focusable="false">/.test(SE) && /\.sesion-vista > \.cabecera\.con-queda > \.tramos:not\(#n\):not\(#n\):not\(#n\) \{ flex: 1 1 60%; min-width: 0; \}/.test(M)
+      && /@media \(max-width: 480px\) \{ \.sesion-vista > \.cabecera \.titulo h1:not\(#n\):not\(#n\):not\(#n\) \{ font-stretch: 100%; text-wrap: balance; \} \}/.test(M),
+      '(B59) en la sesión, «faltan unos N min» junto a los tramos (como el tiempo de un vídeo), un aro fino junto a las series y el nombre sin partirse («Torso B»)');
+    // (290) el nombre de la receta en el modo cocina, entero (dos líneas como mucho)
+    check(/\.coc-nombre:not\(#n\) \{ display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;/.test(src('tacto-b.css')) && !/\.coc-nombre:not\(#n\) \{[^}]*text-overflow: ellipsis/.test(src('tacto-b.css')),
+      '(290) en el modo cocina, el nombre de la receta entero (hasta dos líneas), sin puntos suspensivos');
+    // (333) lo que oye el lector en el modo cocina: el aviso, en el contenedor que no cambia
+    check(/role="group" aria-label=\{`Paso \$\{i \+ 1\} de \$\{n\}`\} aria-live="polite"/.test(src('ui/Cocina.jsx')) && !/class="coc-paso" aria-live/.test(src('ui/Cocina.jsx')),
+      '(333) en el modo cocina, cada paso se anuncia (el aviso, en el contenedor que no cambia)');
+  }
+  check(/title=\{soloBotones\(\) \? undefined : /.test(src('ui/Mantener.jsx')) && /\['basura', 'Lo delicado', /.test(src('ui/HojaGestos.jsx')),
+    '(206 y 343) con «Solo botones», lo delicado no se hace manteniendo pulsado (ni lo sugiere); y «Gestos» lo cuenta');
 }
 
 console.log(`\n${ok} bien, ${fallos} mal`);

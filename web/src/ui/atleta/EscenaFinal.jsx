@@ -6,7 +6,7 @@
 // Los estilos, en diseno.css (bloque 335). Nada de texto entra por opacidad: sube desde detrás de su línea.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Capa } from '../comunes.jsx';
-import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
+import { LOBO_CAJA, loboD } from '../lobo-trazo.js';
 import { sinMovimiento } from '../transiciones.js';
 import { tenirBarra } from '../barra-color.js';
 import { vibrar } from '../hapticos.js';
@@ -25,8 +25,8 @@ const ANCHO_LOBO = 954 / 1092;
 function Lobo({ x, y, alto, clase }) {
   return (
     <svg class={clase} x={x - (alto * ANCHO_LOBO) / 2} y={y} width={alto * ANCHO_LOBO} height={alto} viewBox={LOBO_CAJA} overflow="visible">
-      <path class="escena-lobo-trazo" d={LOBO_D} pathLength="1" fill="none" />
-      <path class="escena-lobo-lleno" d={LOBO_D} fill-rule="evenodd" />
+      <path class="escena-lobo-trazo" d={loboD()} pathLength="1" fill="none" />
+      <path class="escena-lobo-lleno" d={loboD()} fill-rule="evenodd" />
     </svg>
   );
 }

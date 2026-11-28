@@ -4264,21 +4264,25 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .escena-inicio-texto > span { display: block; transform: translateY(110%); animation: escena-linea .5s var(--curva-llega) .3s both; }
 @media (forced-colors: active) { .escena-inicio { background: Canvas; color: CanvasText; } .escena-inicio-lobo { fill: CanvasText; } }
 
-/* 339. Tirar para recargar (ui/tirar.js, de la línea de fluidez; sus estilos, en pulido.css, que carga después: aquí
-   con «body >» delante). La rueda es una luna en su noche: se llena con el dedo (--lleno, de 0 a 1), al pasar el
-   umbral está llena y se enciende, y mientras recarga, se llena y se vacía como el indicador de carga. */
+/* 339. Tirar para recargar (ui/tirar.js, de la linea de fluidez; sus estilos, en pulido.css, que carga despues: aqui
+   con "body >" delante), en su noche. (belleza 173, v0.285) Dentro, el lobo se dibuja con el dedo: su trazo sigue a
+   --lleno (de 0 a 1); al pasar el umbral se rellena y se enciende, y mientras recarga, una luz recorre su trazo sobre
+   el lobo en sombra (sin movimiento: quieto y entero). */
 body > .tirar { background: var(--tinta-noche); box-shadow: var(--sombra-flotante), inset 0 0 0 1px rgba(255, 255, 255, .14); }
-body > .tirar .tirar-rueda { position: relative; width: 22px; height: 22px; border: 0; border-radius: 50%; overflow: hidden; transform: none; background: rgba(255, 255, 255, .17); }
-body > .tirar .tirar-rueda::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 36% 30%, var(--blanco), var(--acento-200)); transform: translateX(calc((var(--lleno, 0) - 1) * 102%)); }
+.tirar-lobo { width: 24px; height: 24px; overflow: visible; }
+.tirar-lobo-trazo { fill: none; stroke: var(--acento-200); stroke-width: 40; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: calc(1 - var(--lleno, 0)); }
+.tirar-lobo-lleno { fill: var(--blanco); fill-opacity: 0; transition: fill-opacity var(--mov-breve) ease-out; }
+body > .tirar.lista .tirar-lobo-lleno { fill-opacity: 1; }
+body > .tirar.girando .tirar-lobo-lleno { fill-opacity: .3; }
 body > .tirar.lista { box-shadow: var(--sombra-flotante), 0 0 0 1px rgba(255, 255, 255, .2), 0 0 18px color-mix(in srgb, var(--acento-400) 75%, transparent); }
-body > .tirar.girando .tirar-rueda { animation: none; }
 @media (prefers-reduced-motion: no-preference) {
-  body > .tirar.lista:not(.girando) .tirar-rueda { animation: tirar-llena .32s var(--curva-rebote); }
-  body > .tirar.girando .tirar-rueda::before { animation: luna-fase 1.2s cubic-bezier(.45, 0, .55, 1) infinite; }
+  body > .tirar.lista:not(.girando) .tirar-lobo { animation: tirar-llena .32s var(--curva-rebote); }
+  body > .tirar.girando .tirar-lobo-trazo { stroke: var(--blanco); stroke-dasharray: .16 .84; animation: tirar-luz 1.6s linear infinite; }
 }
-@media (prefers-reduced-motion: reduce) { body > .tirar.girando .tirar-rueda::before { transform: none; } }
+@media (prefers-reduced-motion: reduce) { body > .tirar.girando .tirar-lobo-trazo { stroke-dashoffset: 0; } }
 @keyframes tirar-llena { from { transform: scale(.8); } }
-@media (forced-colors: active) { body > .tirar { background: Canvas; border: var(--filo-fino) solid CanvasText; } body > .tirar .tirar-rueda::before { background: CanvasText; } }
+@keyframes tirar-luz { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@media (forced-colors: active) { body > .tirar { background: Canvas; border: var(--filo-fino) solid CanvasText; } .tirar-lobo-lleno { fill: CanvasText; } .tirar-lobo-trazo { stroke: CanvasText; } }
 
 /* 340. El check-in enviado (Checkin.jsx): el check-in sale volando hasta el lobo de tu coach, que asoma a la derecha
    y lo recibe con una onda. Con «reducir movimiento», el lobo quieto y sin vuelo. */

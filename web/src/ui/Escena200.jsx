@@ -2,7 +2,7 @@
 // trazo, se llena, y debajo sube el «200» cifra a cifra; con el «200», confeti del color de cada uno (si celebra «lo
 // demás» con todo). Con «reducir movimiento», todo quieto desde el principio. Después, la hoja «Novedades» de siempre.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
+import { LOBO_CAJA, loboD } from './lobo-trazo.js';
 import { lanzarConfeti } from './confeti.js';
 import { sinMovimiento } from './transiciones.js';
 import { tocaEscena200, CLAVE_ESCENA_200 } from '../logica/belleza.js';
@@ -45,8 +45,8 @@ export function Escena200({ rol = 'atleta', alCerrar }) {
     <div class={`escena-200${listo ? ' lista' : ''}`} role="dialog" aria-modal="true" aria-labelledby="e200-titulo" aria-describedby="e200-texto">
       <div class="e200-cuerpo">
         <svg class="e200-lobo" viewBox={LOBO_CAJA} aria-hidden="true" focusable="false">
-          <path class="e200-trazo" d={LOBO_D} pathLength="1" fill="none" />
-          <path class="e200-lleno" d={LOBO_D} fill-rule="evenodd" />
+          <path class="e200-trazo" d={loboD()} pathLength="1" fill="none" />
+          <path class="e200-lleno" d={loboD()} fill-rule="evenodd" />
         </svg>
         <p class="e200-cifra" aria-hidden="true"><span>2</span><span>0</span><span>0</span></p>
         <h1 id="e200-titulo">La app llega a la versión 200</h1>

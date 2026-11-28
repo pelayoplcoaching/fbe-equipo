@@ -62,17 +62,9 @@ html { overscroll-behavior-y: contain; }
   transform: translateY(var(--tirar, 0px)); opacity: min(1, calc(var(--tirar, 0px) / 40px));
 }
 .tirar.soltando { transition: transform var(--mov-breve) cubic-bezier(.2, .8, .2, 1), opacity var(--mov-breve) linear; }
-.tirar-rueda {
-  width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--linea); border-top-color: var(--morado);
-  transform: rotate(var(--giro, 0deg));
-}
-.tirar.lista .tirar-rueda { border-color: var(--morado); border-top-color: transparent; }
-.tirar.girando .tirar-rueda { animation: tirar-gira .7s linear infinite; border-color: var(--linea); border-top-color: var(--morado); }
+/* (lo de dentro de la rueda, el lobo que se dibuja: diseno.css, 339 y belleza 173) */
 @keyframes tirar-gira { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) {
-  .tirar.soltando { transition: opacity var(--mov-rapido) linear; }
-  .tirar.girando .tirar-rueda { animation-duration: 1.4s; }
-}
+@media (prefers-reduced-motion: reduce) { .tirar.soltando { transition: opacity var(--mov-rapido) linear; } }
 
 /* ---------- (pulido 2.3) El hueco de lo que llega tarde (ui/comunes.jsx, Reserva) ---------- */
 /* La envoltura no tiene caja: sus hijos se colocan como si fueran hijos de quien la contiene */

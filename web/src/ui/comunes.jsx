@@ -5,7 +5,7 @@ import { useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, use
 import { escalaGrafica, puntoMasCercano, indicesRecord, trazoSuave, sonFechas, huecosSerie, finDominio, puntoPrevision, franjasBloques } from '../logica/visual.js';
 import { num, leerNumero } from '../logica/calculos.js';
 import { LOBO } from './marca-lobo.js';
-import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
+import { LOBO_CAJA, loboD } from './lobo-trazo.js';
 import { Ilustracion } from './Ilustraciones.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
 import { useMarcaPagina, marcarPagina } from './marca-pagina.js';
@@ -252,7 +252,7 @@ export function Disco({ prioridad, titulo }) {
 export function LoboCarga({ peq = false }) {
   return (
     <span class={`lobo-carga ${peq ? 'chico' : ''}`} aria-hidden="true">
-      <svg viewBox={LOBO_CAJA}><path fill-rule="evenodd" d={LOBO_D} /></svg>
+      <svg viewBox={LOBO_CAJA}><path fill-rule="evenodd" d={loboD()} /></svg>
     </span>
   );
 }
@@ -369,7 +369,7 @@ export function PortadaHistoria({ tono = '' }) {
   return (
     <span class={`portada-historia${tono ? ` ${tono}` : ''}`} aria-hidden="true">
       <span class="ph-barras"><i /><i /><i /></span>
-      <svg viewBox={LOBO_CAJA} focusable="false"><path d={LOBO_D} fill-rule="evenodd" /></svg>
+      <svg viewBox={LOBO_CAJA} focusable="false"><path d={loboD()} fill-rule="evenodd" /></svg>
     </span>
   );
 }
@@ -377,7 +377,7 @@ export function PortadaHistoria({ tono = '' }) {
 export function FinDePagina({ texto }) {
   return (
     <p class="fin-pagina">
-      <svg class="fin-lobo" viewBox={LOBO_CAJA} aria-hidden="true" focusable="false"><path d={LOBO_D} fill-rule="evenodd" /></svg>
+      <svg class="fin-lobo" viewBox={LOBO_CAJA} aria-hidden="true" focusable="false"><path d={loboD()} fill-rule="evenodd" /></svg>
       <span>{texto}</span>
     </p>
   );

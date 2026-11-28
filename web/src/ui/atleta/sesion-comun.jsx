@@ -11,7 +11,7 @@ import { fraseCuenta } from '../../logica/voz.js';
 import { vibrar } from '../hapticos.js';
 import { contexto, sonarFBE, salida, ocupar, empezarPaisaje } from '../sonido.js';
 import { avisoDescanso, fraseQueda, volumenDe } from '../../logica/sonido.js';
-import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
+import { LOBO_CAJA, loboD } from '../lobo-trazo.js';
 import { descansoEnCurso } from '../en-curso.js';
 import { lanzarConfeti } from '../confeti.js';
 import { pistaManda, pistaSono, pistaFinal, prepararPista, pistaActiva } from '../pista-descanso.js';
@@ -313,7 +313,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
           )}
         </svg>
         <div class="reloj-centro">
-          {quedan <= 0 && <svg class="vamos-lobo" viewBox={LOBO_CAJA} aria-hidden="true"><path fill-rule="evenodd" d={LOBO_D} /></svg>}
+          {quedan <= 0 && <svg class="vamos-lobo" viewBox={LOBO_CAJA} aria-hidden="true"><path fill-rule="evenodd" d={loboD()} /></svg>}
           <div class="cuenta num" role="timer" aria-label={quedan > 0 ? `Descanso${pausado ? ' en pausa' : ''}: quedan ${Math.ceil(quedan)} segundos` : 'Descanso terminado'}>{quedan > 0 ? mmss(quedan) : '¡Vamos!'}</div>
           {quedan > 0 && total > 0 && !fase && <div class="de num">de {mmss(total)}</div>}
           {fase && <div class={`respira-texto ${fase.fase}`} aria-hidden="true">{fase.texto}</div>}

@@ -6894,6 +6894,15 @@ if (parte('v0.284: el remate, segunda vuelta')) try {
   fallos++;
   console.log('  ✗ el remate, segunda vuelta (v0.284):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.285: el repaso (el lobo al tirar para actualizar, lo delicado, el lector de pantalla y los bordes sin instalar)
+// (test/e2e-momentos.mjs, probarMomentos6)
+if (parte('v0.285: el repaso')) try {
+  const { probarMomentos6 } = await import('./e2e-momentos.mjs');
+  await probarMomentos6({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el repaso (v0.285):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

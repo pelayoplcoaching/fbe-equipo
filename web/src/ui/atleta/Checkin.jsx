@@ -9,7 +9,7 @@ import { GuiaSugerida } from '../Guias.jsx';
 import { ocasionesDeCheckin } from '../../logica/guias.js';
 import { CabeceraGrande, Siluetas, useApp, useCarga, ErrorCaja, Paso, Segmentos, Icono, Pista } from '../comunes.jsx';
 import { Regla } from '../Regla.jsx';
-import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
+import { LOBO_CAJA, loboD } from '../lobo-trazo.js';
 import { Hilo } from '../Hilo.jsx';
 import { ESCALAS, HORAS_SUENO, ZONAS, MEDIDAS, num, signo } from '../../logica/calculos.js';
 import { semanaCheckin, hoyISO, lunesDe, sumarDias, rangoSemana, fmtCorta, diasEntre } from '../../logica/fechas.js';
@@ -521,7 +521,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
           <span class="pila-xs"><strong>{enviado === 'actualizado' ? 'Check-in actualizado' : suyo ? '¡Check-in enviado!' : '¡Enviado a tu coach!'}</strong><span class="peq secundario">{suyo ? 'Abajo tienes lo que la app hace con él.' : 'Lo revisa y te contesta aquí abajo si hace falta.'}</span></span>
           {/* (diseño, tanda 45) el check-in vuela hasta el lobo de tu coach */}
           <span class="ck-enviado-vuelo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z" /></svg></span>
-          <span class="ck-enviado-lobo" aria-hidden="true"><svg viewBox={LOBO_CAJA}><path fill-rule="evenodd" d={LOBO_D} /></svg></span>
+          <span class="ck-enviado-lobo" aria-hidden="true"><svg viewBox={LOBO_CAJA}><path fill-rule="evenodd" d={loboD()} /></svg></span>
         </div>
       )}
       {/* (filosofía) recién enviado: si ha contado poco sueño o pocas ganas, la guía que viene a cuento */}

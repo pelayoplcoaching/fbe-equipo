@@ -8,6 +8,7 @@
 //   (v0.282) Sentir el récord (312-315): probarMomentos3. (v0.283) Sonido y tacto afinados: probarMomentos4.
 //   Suelta:  npm run build && node test/e2e-momentos.mjs  (SOLO=1, 2, 3 o 4 para una sola)
 import { pathToFileURL } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { irASeccion, subProgreso, irAAjustes } from './secciones.mjs';
 
 export async function probarMomentos({ navegador, check, base = 'http://localhost:4174' }) {
@@ -619,7 +620,7 @@ export async function probarMomentos5({ navegador, check, base = 'http://localho
           check(await pausar.count() === 1, '(334) la historia, con su botón de pausa arriba');
           await pausar.click();
           const seguir = h.getByRole('button', { name: 'Seguir la historia' });
-          const parada = await hasta(async () => (await seguir.getAttribute('aria-pressed')) === 'true', 3000);
+          const parada = await hasta(async () => (await seguir.count()) === 1, 3000);
           const barra = await h.locator('.historia-barras .actual i').first().evaluate((el) => getComputedStyle(el).animationPlayState).catch(() => '');
           check(parada && barra !== 'running', `(334) al tocarlo se para, y su barra también (${barra || 'sin barra'})`);
           await p.keyboard.press(' ');
@@ -696,6 +697,217 @@ export async function probarMomentos5({ navegador, check, base = 'http://localho
   check(errores.length === 0, `el remate, segunda vuelta, sin errores${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
 }
 
+// (v0.285) El repaso: el lobo que se dibuja al tirar para actualizar (173); lo delicado, manteniendo pulsado, y con «Solo
+// botones», siempre la pregunta (206 y 343); lo que oye el lector de pantalla en lo nuevo (333); y, sin instalar, los
+// bordes de la pantalla son del navegador (346).
+export async function probarMomentos6({ navegador, check, base = 'http://localhost:4174' }) {
+  const errores = [];
+  const abrir = async (url, quien, ajustes = {}) => {
+    const ctx = await navegador.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'es-ES', timezoneId: 'Europe/Madrid', bypassCSP: true, reducedMotion: 'no-preference' });
+    await ctx.route(/i\.ytimg\.com/, (r) => r.abort());
+    const p = await ctx.newPage();
+    p.setDefaultTimeout(10000);
+    p.on('pageerror', (e) => errores.push(`error de página: ${String(e.message).slice(0, 200)}`));
+    await p.addInitScript((aj) => {
+      try {
+        for (const k of ['fbe-escena-200', 'fbe-bienvenida-vista', 'fbe-nec-todas']) localStorage.setItem(k, '1');
+        localStorage.setItem('fbe-ajustes', JSON.stringify({ ...JSON.parse(localStorage.getItem('fbe-ajustes') || '{}'), ...aj }));
+      } catch { /* */ }
+    }, ajustes);
+    await p.goto(`${base}/${url}`);
+    const b = p.getByRole('button', { name: quien }).first();
+    if (await b.waitFor({ timeout: 6000 }).then(() => true).catch(() => false)) await b.click();
+    await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+    await p.waitForTimeout(1500);
+    for (let i = 0; i < 6; i++) {
+      const c = p.locator('[aria-modal="true"] button:has-text("Vale"), [aria-modal="true"] button:has-text("Seguir"), [aria-modal="true"] button:has-text("Ahora no"), [aria-modal="true"] button:has-text("Entendido")').first();
+      if (await c.isVisible().catch(() => false)) { await c.click().catch(() => {}); await p.waitForTimeout(350); } else break;
+    }
+    const cdp = await ctx.newCDPSession(p);
+    const dedo = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+    return { ctx, p, dedo };
+  };
+  const hasta = async (fn, ms = 6000) => { const fin = Date.now() + ms; while (Date.now() < fin) { if (await fn().catch(() => false)) return true; await new Promise((r) => setTimeout(r, 120)); } return false; };
+
+  // --- 173: tirar para actualizar en Hoy: el lobo se dibuja con el dedo, se rellena al pasar el umbral y, mientras
+  //     llega todo, una luz recorre su trazo
+  {
+    const { ctx, p, dedo } = await abrir('?demo', /Ana/);
+    try {
+      await p.evaluate(() => scrollTo(0, 0));
+      await p.waitForTimeout(400);
+      const leer = () => p.evaluate(() => {
+        const t = document.querySelector('body > .tirar'), tr = t?.querySelector('.tirar-lobo-trazo'), ll = t?.querySelector('.tirar-lobo-lleno');
+        return t && tr && ll ? { lleno: Number(getComputedStyle(t).getPropertyValue('--lleno')), off: parseFloat(getComputedStyle(tr).strokeDashoffset), relleno: Number(getComputedStyle(ll).fillOpacity), lista: t.classList.contains('lista'), girando: t.classList.contains('girando'), oculto: t.getAttribute('aria-hidden') } : null;
+      });
+      const x = 196, y0 = 430;
+      await dedo('touchStart', x, y0);
+      for (let k = 1; k <= 8; k++) { await dedo('touchMove', x, y0 + (100 * k) / 8); await p.waitForTimeout(16); }
+      const medio = await leer();
+      check(!!medio && medio.oculto === 'true' && medio.lleno > 0.5 && medio.lleno < 0.9 && Math.abs(medio.off - (1 - medio.lleno)) < 0.05 && medio.relleno === 0 && !medio.lista,
+        `(173) al tirar, el lobo se dibuja con el dedo: su trazo va por el ${medio ? Math.round(medio.lleno * 100) : '?'} % y aún sin rellenar`);
+      for (let k = 1; k <= 6; k++) { await dedo('touchMove', x, y0 + 100 + (130 * k) / 6); await p.waitForTimeout(16); }
+      await p.waitForTimeout(400);
+      const lleno = await leer();
+      check(!!lleno && lleno.lista && lleno.lleno === 1 && lleno.off < 0.01 && lleno.relleno === 1, '(173) pasado el umbral, el lobo entero y relleno (y la rueda se enciende)');
+      await dedo('touchEnd');
+      const gira = await hasta(async () => (await leer())?.girando === true, 2000);
+      const enGiro = await leer();
+      check(gira && !!enGiro && enGiro.relleno < 0.5, `(173) al soltar, mientras llega todo, el lobo en sombra y una luz por su trazo (relleno ${enGiro ? enGiro.relleno : '?'})`);
+      check(await hasta(async () => !(await leer())?.girando, 10000), '(173) y al llegar, la rueda se va');
+    } finally { await ctx.close(); }
+  }
+
+  // --- 333: lo que oye el lector de pantalla en lo nuevo; 346: sin instalar, los bordes son del navegador
+  {
+    const { ctx, p, dedo } = await abrir('?demo', /Ana/);
+    try {
+      // la regla de «Peso de hoy»: un deslizador con su nombre y su valor con la unidad
+      const peso = p.locator('[data-atajo="peso"]:visible').first();
+      if (await peso.count()) {
+        await peso.scrollIntoViewIfNeeded().catch(() => {});
+        await peso.click();
+        const ph = p.getByRole('dialog', { name: 'Peso de hoy' });
+        await ph.waitFor();
+        const regla = ph.getByRole('slider').first();
+        const conRegla = await regla.waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+        const nombre = conRegla ? await regla.getAttribute('aria-label') : '', valor = conRegla ? await regla.getAttribute('aria-valuetext') : '';
+        check(conRegla && !!nombre && /\d kg$/.test(valor || ''), `(333) la regla del peso: un deslizador con su nombre («${nombre}») y su valor con la unidad («${valor}»)`);
+        await ph.locator('.cerrar-hoja').click();
+        await ph.waitFor({ state: 'detached' });
+      } else check(true, '(333) sin «Peso de hoy» a la vista en esta demo');
+      // las barras de series por músculo: cada una dice su músculo y sus series
+      await irASeccion(p, 'Progreso');
+      await p.waitForTimeout(900);
+      const barras = p.locator('.barras button[aria-label*="series"]');
+      const nb = await barras.count();
+      check(nb > 0, `(333) las barras de series por músculo, cada una con su nombre (${nb}${nb ? `; la primera: «${await barras.first().getAttribute('aria-label')}»` : ''})`);
+      // la historia de una semana: su nombre, sus zonas con nombre y la pausa sin el estado de «pulsado»
+      await subProgreso(p, 'resumen');
+      const filas = p.locator('button.amb-sem');
+      if (await filas.first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false)) {
+        await filas.first().click();
+        const h = p.locator('[role="dialog"].historia').first();
+        await h.waitFor({ timeout: 8000 });
+        await p.waitForTimeout(600);
+        const nombreH = await h.getAttribute('aria-label');
+        const pausa = h.getByRole('button', { name: 'Pausar la historia' });
+        const conPausa = await pausa.count();
+        const zonas = await h.locator('.historia-zona').evaluateAll((l) => l.map((z) => z.getAttribute('aria-label')));
+        check(!!nombreH && zonas.length === 2 && zonas.every(Boolean) && (conPausa === 0 || (await pausa.getAttribute('aria-pressed')) === null),
+          `(333) la historia: su nombre («${nombreH}»), sus dos zonas con nombre (${zonas.join(' · ')}) y la pausa, que dice lo que hará`);
+        await p.keyboard.press('Escape');
+        await h.waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+      } else check(true, '(333) sin semanas que contar en esta demo');
+      // 346: sin instalar, el dedo que empieza en el borde de la pantalla es del navegador (en Safari, atrás y adelante);
+      // un poco más dentro, deslizar cambia de apartado como siempre
+      const activa = () => p.locator('.pestanas-progreso [aria-selected="true"]').first().textContent().catch(() => '');
+      // (una altura en la que, en los dos sitios donde empieza el dedo, no haya nada con su propio gesto de lado)
+      const sinDeslizar = (readFileSync(new URL('../web/src/ui/deslizar.js', import.meta.url), 'utf8').match(/export const SIN_DESLIZAR = '([^']+)'/) || [])[1] || '.grafica-caja';
+      const yy = await p.evaluate((no) => {
+        for (let y = 260; y < innerHeight - 140; y += 24) {
+          const ok = [300, 384].every((x) => { const el = document.elementFromPoint(x, y); return el?.closest('.progreso-panel') && !el.closest(no); });
+          if (ok) return y;
+        }
+        return 360;
+      }, sinDeslizar);
+      const antes = await activa();
+      const barrer = async (x0, dx) => { await dedo('touchStart', x0, yy); for (let k = 1; k <= 10; k++) { await dedo('touchMove', x0 + (dx * k) / 10, yy); await p.waitForTimeout(16); } await dedo('touchEnd'); await p.waitForTimeout(700); };
+      await barrer(384, -220);
+      const trasBorde = await activa();
+      await barrer(300, -220);
+      const trasDentro = await activa();
+      check(trasBorde === antes && trasDentro !== antes, `(346) sin instalar, deslizar desde el borde no cambia de apartado (lo usa el navegador); desde dentro, sí (${antes} · ${trasBorde} · ${trasDentro})`);
+    } finally { await ctx.close(); }
+  }
+
+  // --- 206 y 343: lo delicado. Un toque pregunta; mantenerlo pulsado un segundo lo hace sin preguntar; con «Solo
+  //     botones», mantenerlo pulsado no hace nada (y un toque, la pregunta de siempre)
+  for (const solo of [true, false]) {
+    const { ctx, p, dedo } = await abrir('?demo=esencial', /Tomás/, solo ? { soloBotones: true } : {});
+    try {
+      await p.locator('.ayu-necesitas').getByRole('button', { name: 'Mis pruebas' }).click();
+      const hoja = p.locator('[aria-modal="true"]').last();
+      const conDatos = await p.waitForFunction(() => /14 veces, el/.test([...document.querySelectorAll('[aria-modal="true"]')].pop()?.textContent || ''), null, { timeout: 15000 }).then(() => true).catch(() => false);
+      const boton = hoja.getByRole('button', { name: /Borrar mis pruebas/ });
+      if (conDatos && await boton.count()) {
+        await boton.scrollIntoViewIfNeeded();
+        const c = await boton.boundingBox();
+        await dedo('touchStart', c.x + c.width / 2, c.y + c.height / 2);
+        await p.waitForTimeout(1250);
+        await dedo('touchEnd');
+        await p.waitForTimeout(900);
+        const siguen = /14 veces, el/.test(await hoja.textContent());
+        if (solo) {
+          check(siguen && (await hoja.locator('.mnt-boton[data-llena]').count()) === 0, '(343) con «Solo botones», mantener pulsado «Borrar mis pruebas» no borra nada (ni se llena)');
+          if (!(await hoja.getByRole('group', { name: 'Borrar tus pruebas' }).count())) await boton.click();
+          const pregunta = hoja.getByRole('group', { name: 'Borrar tus pruebas' });
+          check(await pregunta.waitFor({ timeout: 3000 }).then(() => true).catch(() => false), '(343) y un toque, la pregunta de siempre');
+          await pregunta.getByRole('button', { name: 'Cancelar' }).click();
+        } else check(!siguen, '(206) mantener pulsado un segundo «Borrar mis pruebas» las borra sin preguntar');
+      } else check(true, '(206) Tomás sin pruebas que borrar en esta demo');
+    } finally { await ctx.close(); }
+  }
+  // --- 348: sin cobertura, igual de bien (con la app guardada, como quien la tiene instalada): la regla de los kilos con
+  //     sus estilos, el cartel del descanso y el modo cocina
+  for (const esencial of [false, true]) {
+    const { ctx, p } = await abrir(esencial ? '?demo=esencial' : '?demo', esencial ? /Tomás/ : /Ana/, {});
+    try {
+      await p.evaluate(() => { try { localStorage.setItem('fbe-sw-local', '1'); } catch { /* */ } });
+      await p.reload();
+      const b = p.getByRole('button', { name: esencial ? /Tomás/ : /Ana/ }).first();
+      if (await b.waitFor({ timeout: 6000 }).then(() => true).catch(() => false)) await b.click();
+      await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+      await p.evaluate(() => Promise.race([navigator.serviceWorker.ready, new Promise((r) => setTimeout(r, 30000))]));
+      if (!(await p.evaluate(() => !!navigator.serviceWorker.controller))) {
+        await p.reload();
+        if (await b.waitFor({ timeout: 6000 }).then(() => true).catch(() => false)) await b.click();
+        await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+      }
+      const guardada = await hasta(async () => p.evaluate(async () => { if (!navigator.serviceWorker.controller) return false; for (const k of await caches.keys()) if (k.startsWith('fbe-atletas-') && (await (await caches.open(k)).keys()).length > 300) return true; return false; }), 30000);
+      await p.waitForTimeout(800);
+      for (let i = 0; i < 5 && await p.locator('[aria-modal="true"]').count(); i++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
+      await ctx.setOffline(true);
+      if (!esencial) {
+        await p.locator('[data-atajo="empezar"]').first().click();
+        for (let k = 0; k < 4 && !(await p.locator('.sesion-vista').count()); k++) { await p.waitForTimeout(1200); const e = p.getByRole('button', { name: /^Empezar$|Vamos|Saltar/ }).first(); if (await e.count()) await e.click().catch(() => {}); }
+        await p.locator('.sesion-vista').waitFor({ timeout: 15000 });
+        await p.waitForTimeout(1000);
+        for (const bb of await p.locator('.pista').getByRole('button', { name: 'Entendido' }).all()) await bb.click().catch(() => {});
+        const campo = p.locator('.sesion-vista input[inputmode="none"]').first();
+        await campo.click();
+        const regla = p.locator('.teclado-serie [role="slider"]').first();
+        const conRegla = await regla.waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+        const estilo = conRegla ? await p.evaluate(() => { const l = [...document.querySelectorAll('link[rel="stylesheet"]')].find((x) => /Sesion-/.test(x.getAttribute('href') || '')); const c = document.querySelector('.teclado-serie .rg-caja'); return { hoja: !!l?.sheet, alto: Math.round(c?.getBoundingClientRect().height || 0) }; }) : { hoja: false, alto: 0 };
+        check(guardada && conRegla && estilo.hoja && estilo.alto > 20, `(348) sin cobertura, la sesión abre con sus estilos y la regla de los kilos (${estilo.alto} px de alto)`);
+        await p.locator('.teclado-serie').getByRole('button', { name: 'Ocultar el teclado' }).click().catch(() => {});
+        await p.getByRole('button', { name: /^Marcar la serie 1 como hecha/ }).first().click();
+        const reloj = p.locator('.temporizador');
+        await reloj.waitFor({ timeout: 8000 });
+        await reloj.getByRole('button', { name: 'Ver el descanso en grande (modo cartel)' }).click();
+        check(await p.locator('.ct-raiz').waitFor({ timeout: 6000 }).then(() => true).catch(() => false), '(348) y el cartel del descanso');
+        await p.keyboard.press('Escape');
+      } else {
+        await p.locator('nav.tabs').getByRole('button', { name: /^Recetas/ }).first().click();
+        const tarjetas = p.locator('.rejilla-recetas button');
+        const conRecetas = await tarjetas.first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+        if (conRecetas) {
+          await tarjetas.first().click();
+          await p.locator('[aria-modal="true"] .coc-ing').first().waitFor({ timeout: 15000 });
+          await p.locator('[aria-modal="true"]').last().getByRole('button', { name: 'Modo cocina' }).click();
+          const cocina = p.locator('.coc-raiz');
+          const abre = await cocina.waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+          const nombre = abre ? await cocina.locator('.coc-nombre').evaluate((e) => ({ cortado: e.scrollHeight > e.clientHeight + 2 || getComputedStyle(e).textOverflow === 'ellipsis', lineas: Math.round(e.getBoundingClientRect().height / parseFloat(getComputedStyle(e).lineHeight)) })) : null;
+          check(guardada && abre && !!nombre && !nombre.cortado, `(348) sin cobertura, una receta y su modo cocina; (290) con el nombre entero (${nombre ? nombre.lineas : '?'} líneas)`);
+          await p.keyboard.press('Escape');
+        } else check(false, '(348) sin cobertura, las recetas no salen');
+      }
+      await ctx.setOffline(false);
+    } finally { await ctx.close(); }
+  }
+  check(errores.length === 0, `el repaso, sin errores${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
+}
+
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
   const { chromium } = await import('playwright');
   const { servir } = await import('./servidor.mjs');
@@ -710,6 +922,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
   if (!solo || solo === '3') { console.log('Sentir el récord (v0.282)'); try { await probarMomentos3({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
   if (!solo || solo === '4') { console.log('Sonido y tacto afinados (v0.283)'); try { await probarMomentos4({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
   if (!solo || solo === '5') { console.log('El remate, segunda vuelta (v0.284)'); try { await probarMomentos5({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
+  if (!solo || solo === '6') { console.log('El repaso (v0.285)'); try { await probarMomentos6({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
   await navegador.close(); srv.close();
   console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
   if (fallos) process.exit(1);

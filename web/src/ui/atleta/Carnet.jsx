@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, Icono } from '../comunes.jsx';
 import { HojaCompartir, FUENTE, dibujarLobo } from '../Compartir.jsx';
-import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
+import { LOBO_CAJA, loboD } from '../lobo-trazo.js';
 import { datosCarnet, datosImagenCarnet, inclinacion, inclinacionMovil } from '../../logica/carnet.js';
 import { sinMovimiento } from '../transiciones.js';
 import { Imagen } from '../Imagen.jsx';
@@ -94,11 +94,11 @@ export function Carnet({ bloque }) {
             <svg class="carnet-lineas" viewBox="0 0 340 214" preserveAspectRatio="xMidYMid slice" focusable="false">
               {[0, 1, 2, 3].map((i) => <circle key={i} cx="300" cy="-10" r={70 + i * 40} />)}
             </svg>
-            <svg class="carnet-lobo-fondo" viewBox={LOBO_CAJA} focusable="false"><path d={LOBO_D} fill-rule="evenodd" /></svg>
+            <svg class="carnet-lobo-fondo" viewBox={LOBO_CAJA} focusable="false"><path d={loboD()} fill-rule="evenodd" /></svg>
             <div class="carnet-brillo" />
           </div>
           <div class="carnet-cab">
-            <svg class="carnet-lobo" viewBox={LOBO_CAJA} width="36" height="36" aria-hidden="true" focusable="false"><path d={LOBO_D} fill-rule="evenodd" /></svg>
+            <svg class="carnet-lobo" viewBox={LOBO_CAJA} width="36" height="36" aria-hidden="true" focusable="false"><path d={loboD()} fill-rule="evenodd" /></svg>
             <span class="carnet-marca">{marca}</span>
             <span class="carnet-numero num">{d.numero}</span>
           </div>

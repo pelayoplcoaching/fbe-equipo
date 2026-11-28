@@ -36,9 +36,11 @@ export function useHistoriaTacto(caja, o) {
   return [pausa, alternar];
 }
 
-// El botón de pausa, arriba a la izquierda (no sale con «reducir movimiento»: entonces la historia no avanza sola). Su
+// El botón de pausa, arriba a la izquierda (no sale con «reducir movimiento»: entonces la historia no avanza sola). (belleza
+// 333, v0.285) Su nombre dice lo que hará («Pausar» o «Seguir»), como en un reproductor; sin el estado de «pulsado», que con el nombre
+// cambiando el lector lo leía doble («Seguir la historia, pulsado»). Su
 // sitio, en línea: este archivo va en el arranque y sus estilos irían con él (y los del arranque van justos de peso)
 export function BotonPausa({ pausa, alternar }) {
-  return h('button', { type: 'button', class: 'btn btn-icono plano historia-cerrar', style: 'right:auto;left:max(var(--esp-12),env(safe-area-inset-left,0px))', 'aria-pressed': pausa ? 'true' : 'false', 'aria-label': pausa ? 'Seguir la historia' : 'Pausar la historia', onClick: alternar },
+  return h('button', { type: 'button', class: 'btn btn-icono plano historia-cerrar', style: 'right:auto;left:max(var(--esp-12),env(safe-area-inset-left,0px))', 'aria-label': pausa ? 'Seguir la historia' : 'Pausar la historia', onClick: alternar },
     h(Icono, { n: pausa ? 'play' : 'pausa' }));
 }

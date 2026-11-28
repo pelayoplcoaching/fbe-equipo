@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
+import { LOBO_CAJA, loboD } from './lobo-trazo.js';
 import { useApp, useCarga, Hoja, Icono, Cargando, descargar, copiar, usePreferencia, Segmentos, P } from './comunes.jsx';
 import { esPorSuCuenta } from '../logica/esencial.js';
 import { num } from '../logica/calculos.js';
@@ -240,7 +240,7 @@ export function dibujarLobo(x, px, py, alto, color = '#FFFFFF', opacidad = 1) {
   const e = alto / ch;
   x.save();
   x.globalAlpha = opacidad; x.translate(px, py); x.scale(e, e); x.translate(-cx, -cy);
-  x.fillStyle = color; x.fill(new Path2D(LOBO_D), 'evenodd');
+  x.fillStyle = color; x.fill(new Path2D(loboD()), 'evenodd');
   x.restore();
   return cw * e;
 }

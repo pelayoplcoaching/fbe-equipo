@@ -1,7 +1,7 @@
 import { tratoDe, saludoDeHora, bienvenidaPrimera, rematePorTono } from '../logica/trato.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { hoyISO } from '../logica/fechas.js';
-import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
+import { LOBO_CAJA, loboD } from './lobo-trazo.js';
 import { Icono, CifraSube, useApp, useCarga } from './comunes.jsx';
 import { cuentaMeta } from '../logica/rumbo.js';
 import { esCumple, porqueParaHoy, momentoBienvenida, textoMensajeCoach, mensajeDe } from '../logica/personal.js';
@@ -169,7 +169,7 @@ export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = nu
       {hayImagen(imagenBienvenida(horaDelMovil(), hoyISO())) && <LuzDelDia momento={imagenBienvenida(horaDelMovil()).replace('bienvenida-', '')} />}
       <div class="bdia-cuerpo" ref={cuerpo} {...(desliza ? { tabIndex: 0, role: 'group', 'aria-label': 'Tu resumen de hoy' } : {})}>
         <div class="bdia-arriba">
-          <span class="bdia-marca"><svg viewBox={LOBO_CAJA} aria-hidden="true" focusable="false"><path fill-rule="evenodd" d={LOBO_D} /></svg>FBE Equipo</span>
+          <span class="bdia-marca"><svg viewBox={LOBO_CAJA} aria-hidden="true" focusable="false"><path fill-rule="evenodd" d={loboD()} /></svg>FBE Equipo</span>
           <span class="bdia-fecha">{fechaCorta()}</span>
         </div>
         <h1 id="bdia-titulo"><span class="bdia-saludo">{saludo}</span> <span class="bdia-nombre">{nombreVisible}</span></h1>

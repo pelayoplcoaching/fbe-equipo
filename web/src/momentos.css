@@ -64,3 +64,17 @@
 
 /* 315 - El primer record de tu vida: el aro de oro que se abre desde la luna (lo mueve el codigo, una vez) */
 .ef-aro:not(#n):not(#n):not(#n) { fill: none; stroke: var(--oro-200); stroke-width: 3; opacity: 0; transform-box: fill-box; transform-origin: center; }
+
+/* B59 (repaso v0.285) - La cabecera de la sesion. "faltan unos N min" sale del reloj y va a la derecha de los tramos, como
+   el tiempo junto a la barra de un video: dentro del reloj ensanchaba su columna y el nombre se partia ("Torso" / "B"), y
+   en moviles estrechos el reloj ya no cabia junto a los tramos. Junto a "1/17 series", un aro fino con lo hecho. */
+/* (los tramos, con base del 60 %: no caben en la fila del nombre y comparten la suya con lo que falta) */
+.sesion-vista > .cabecera.con-queda > .tramos:not(#n):not(#n):not(#n) { flex: 1 1 60%; min-width: 0; }
+.ses-queda:not(#n):not(#n):not(#n) { order: 3; flex: none; align-self: center; margin-left: auto; padding-left: var(--esp-8); }
+.ses-aro:not(#n):not(#n):not(#n) { width: 14px; height: 14px; margin-right: var(--esp-4); vertical-align: -2px; transform: rotate(-90deg); }
+.ses-aro-c:not(#n):not(#n):not(#n) { fill: none; stroke: var(--linea); stroke-width: 3; }
+.ses-aro-a:not(#n):not(#n):not(#n) { fill: none; stroke: var(--morado); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1; transition: stroke-dashoffset var(--mov-medio) var(--curva-casa); }
+/* (y en el movil, el nombre con la letra de ancho normal y no la de titulo: a 390 px "Torso B" pedia 98 px y tenia 96) */
+@media (max-width: 480px) { .sesion-vista > .cabecera .titulo h1:not(#n):not(#n):not(#n) { font-stretch: 100%; text-wrap: balance; } }
+@media (prefers-reduced-motion: reduce) { .ses-aro-a:not(#n):not(#n):not(#n) { transition: none; } }
+@media (forced-colors: active) { .ses-aro-a:not(#n):not(#n):not(#n) { stroke: Highlight; } .ses-aro-c:not(#n):not(#n):not(#n) { stroke: CanvasText; } }

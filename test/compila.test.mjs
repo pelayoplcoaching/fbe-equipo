@@ -60,8 +60,11 @@ import { readFileSync } from 'node:fs';
 // (v0.279: estilos a 929: el afinado medido pantalla a pantalla toca piezas del arranque —la cabecera pegada con el
 // nombre entero, la marca y los títulos con letra «Muy grande», «Leer más» con 44 px de toque y el hueco de las filas de
 // Hoy—: 1 KB)
+// (v0.285: código otra vez a 610 comprimido, el de la v0.270: el trazado del lobo ya no viaja en el código; la app lo lee
+// del index.html, donde va una vez escondido (loboD() en ui/lobo-trazo.js): 12 KB menos, 6 comprimidos. Tras las tres
+// tandas de 201-350, el arranque pesa menos que antes de empezarlas: 1778 KB y 607 comprimidos, frente a 1783 y 610)
 const PRESUPUESTO = {
-  js: { crudo: 1790, gz: 613 },
+  js: { crudo: 1790, gz: 610 },
   css: { crudo: 929, gz: 164 },
 };
 

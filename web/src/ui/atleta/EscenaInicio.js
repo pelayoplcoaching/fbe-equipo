@@ -3,7 +3,7 @@
 // después se levanta como un telón. No tapa nada que se pueda tocar (pointer-events: none): la sesión ya está debajo
 // y se puede empezar a apuntar. Es un adorno (aria-hidden) y no sale con «reducir movimiento».
 // Los estilos, en diseno.css (bloque 338).
-import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
+import { LOBO_CAJA, loboD } from '../lobo-trazo.js';
 import { sinMovimiento } from '../transiciones.js';
 import { vibrar, alPintar, vibrarAlPintar } from '../hapticos.js';
 import { sonarFBE } from '../sonido.js';
@@ -22,7 +22,7 @@ export function lanzarEscenaInicio(desde = null) {
   el.setAttribute('aria-hidden', 'true');
   el.style.setProperty('--ox', `${Math.round(r ? r.left + r.width / 2 : window.innerWidth / 2)}px`);
   el.style.setProperty('--oy', `${Math.round(r ? r.top + r.height / 2 : window.innerHeight * 0.8)}px`);
-  el.innerHTML = `<svg class="escena-inicio-lobo" viewBox="${LOBO_CAJA}" focusable="false"><path fill-rule="evenodd" d="${LOBO_D}"/>`
+  el.innerHTML = `<svg class="escena-inicio-lobo" viewBox="${LOBO_CAJA}" focusable="false"><path fill-rule="evenodd" d="${loboD()}"/>`
     + '<ellipse class="escena-inicio-ojo" cx="486" cy="560" rx="54" ry="26" transform="rotate(18 486 560)"/><ellipse class="escena-inicio-ojo" cx="768" cy="560" rx="54" ry="26" transform="rotate(-18 768 560)"/></svg>'
     + '<p class="escena-inicio-texto"><span>A por ello</span></p>';
   document.body.appendChild(el);

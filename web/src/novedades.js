@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.285': {
+    // (el repaso: 331-348 y la 173; «claude/belleza-350-estado.md»)
+    atleta: [
+      'Hoy, al tirar hacia abajo para ponerla al día, el lobo se dibuja con tu dedo.',
+      'En la sesión, «faltan unos N min» va junto a la barra de tus ejercicios, y el nombre de la sesión ya no se parte.',
+      'En Ajustes, con «Solo botones», borrar siempre te pregunta antes, aunque lo mantengas pulsado.',
+    ],
+    coach: [
+      'Repaso (331-348): sin cobertura, lector de pantalla, bordes del navegador, cabecera de la sesión y 6 KB menos al abrir.',
+    ],
+  },
   '0.284': {
     // (remate 330-347, segunda vuelta; «claude/belleza-350-estado.md»)
     atleta: [
